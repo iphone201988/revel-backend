@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Password - Revel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 480px;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .icon-circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            background: #e0e7ff;
+            border-radius: 50%;
+            margin-bottom: 20px;
+        }
+
+        .icon-circle svg {
+            width: 32px;
+            height: 32px;
+            color: #4f46e5;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        h2 {
+            font-size: 20px;
+            color: #374151;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 40px 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-password:hover {
+            color: #374151;
+        }
+
+        .requirements {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .requirements-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .requirement {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .requirement.valid {
+            color: #059669;
+        }
+
+        .requirement svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .message {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .message svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 14px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        button[type="submit"]:hover {
+            background: #4338ca;
+            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+        }
+
+        button[type="submit"]:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="icon-circle">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <h1>Revel</h1>
+            <h2>JOURNEY WITHIN</h2>
+            <p class="subtitle">Set Password</p>
+            <p class="subtitle">Enter your password below</p>
+        </div>
+
+        <div id="message" class="message hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 8v4"></path>
+                <path d="M12 16h.01"></path>
+            </svg>
+            <span id="messageText"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-wrapper">
+                <input type="password" id="password" placeholder="Enter your password">
+                <button type="button" class="toggle-password" onclick="togglePassword('password')">
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="requirements" class="requirements hidden">
+            <div class="requirements-title">Password must contain:</div>
+            <div class="requirement" id="req-length">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span>At least 8 characters</span>
+            </div>
+            <div class="requirement" id="req-upper">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span>One uppercase letter</span>
+            </div>
+            <div class="requirement" id="req-lower">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span>One lowercase letter</span>
+            </div>
+            <div class="requirement" id="req-number">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span>One number</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="confirmPassword">Confirm New Password</label>
+            <div class="input-wrapper">
+                <input type="password" id="confirmPassword" placeholder="Confirm your password">
+                <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword')">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <button type="submit" onclick="handleSubmit()">Reset Password</button>
+    </div>
+
+    <script>
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const requirementsDiv = document.getElementById('requirements');
+        const messageDiv = document.getElementById('message');
+        const messageText = document.getElementById('messageText');
+
+        passwordInput.addEventListener('input', validatePasswordRequirements);
+
+        function validatePasswordRequirements() {
+            const password = passwordInput.value;
+            
+            if (password.length > 0) {
+                requirementsDiv.classList.remove('hidden');
+            } else {
+                requirementsDiv.classList.add('hidden');
+                return;
+            }
+
+            const hasLength = password.length >= 8;
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+
+            updateRequirement('req-length', hasLength);
+            updateRequirement('req-upper', hasUpper);
+            updateRequirement('req-lower', hasLower);
+            updateRequirement('req-number', hasNumber);
+        }
+
+        function updateRequirement(id, valid) {
+            const element = document.getElementById(id);
+            const svg = element.querySelector('svg');
+            
+            if (valid) {
+                element.classList.add('valid');
+                svg.innerHTML = '<circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path>';
+            } else {
+                element.classList.remove('valid');
+                svg.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>';
+            }
+        }
+
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
+        }
+
+        function validatePassword(password) {
+            const minLength = password.length >= 8;
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            
+            return minLength && hasUpper && hasLower && hasNumber;
+        }
+
+        function showMessage(text, type) {
+            messageText.textContent = text;
+            messageDiv.className = 'message ' + type;
+            messageDiv.classList.remove('hidden');
+            
+            const svg = messageDiv.querySelector('svg');
+            if (type === 'success') {
+                svg.innerHTML = '<circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path>';
+            } else {
+                svg.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>';
+            }
+        }
+
+        function handleSubmit() {
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+
+            messageDiv.classList.add('hidden');
+
+            if (!password || !confirmPassword) {
+                showMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (!validatePassword(password)) {
+                showMessage('Password does not meet requirements', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match', 'error');
+                return;
+            }
+
+            const searchToken = window.location.search;
+            const tokenValue = new URLSearchParams(searchToken);
+            const token = tokenValue.get('token');
+            
+            fetch('http://localhost:2001/api/provider/set-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password, token: token })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                showMessage('Password set successfully!', 'success');
+                
+                setTimeout(function() {
+                    passwordInput.value = '';
+                    confirmPasswordInput.value = '';
+                    requirementsDiv.classList.add('hidden');
+                    messageDiv.classList.add('hidden');
+                }, 2000);
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+                showMessage('Error setting password. Please try again.', 'error');
+            });
+        }
+
+        confirmPasswordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleSubmit();
+            }
+        });
+    </script>
+</body>
+</html>
