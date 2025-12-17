@@ -75,7 +75,41 @@ const clientModel = new mongoose.Schema({
     type:String,
     enum:[User_Status.Active, User_Status.Deleted],
     default :User_Status.Active
-  }
+  },
+   clientProfile: {
+      interests: {
+        type: String,
+        default: "",
+      },
+      strengths: {
+        type: String,
+        default: "",
+      },
+      challenges: {
+        type: String,
+        default: "",
+      },
+      familyContext: {
+        type: String,
+        default: "",
+      },
+      preferredActivities: {
+        type: String,
+        default: "",
+      },
+      sensoryProcessing: {
+        type: String,
+        default: "",
+      },
+      communication: {
+        type: String,
+        default: "",
+      },
+      safetyConsiderations: {
+        type: String,
+        default: "",
+      },
+    },
 
   //Every client has an ITP Review Date → the date when their Individual Treatment Plan must be reviewed by the provider/QSP (usually required every 90 days
 });

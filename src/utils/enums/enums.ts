@@ -83,6 +83,11 @@ export const SessionType = {
 Baseline_Data_Collection:"Baseline Data Collection"
 }
 
+export const SessionStatus = {
+  Active : "Active",
+  Abandon : "Abandon",
+  Deleted : 'Deleted'
+}
 
 
 
@@ -135,3 +140,48 @@ export enum AuditResource {
   SESSION = "Session",
 }
 
+export const supportsOptions = [
+  'Coregulation',
+  'Visual supports',
+  'Offering Options',
+  'Asking leading questions',
+  'Asking open ended questions',
+  'Wait Watch Wonder',
+  'Words Action Affect',
+  'Joining',
+  'Use of Affect',
+  'Incorporating client interests',
+  'Sensory support',
+  'Environmental Modifications',
+  'Praxis Support',
+  'Affect Attunement',
+  'Role-Playing',
+  'Accommodating for Cognitive Load',
+  'Validation',
+  'Pacing',
+  'Scaffolding',
+  'Matching verbal complexity',
+  'Using natural contexts to enrich meaning',
+  'Expanding on the child\'s communication without',
+];
+
+export const activityOptions = [
+  'Pretend Play',
+  'Art Activities',
+  'Outdoor Play',
+  'Building/Construction',
+  'Sensory Play',
+  'Music/Movement',
+  'Books/Stories',
+  'Puzzles/Games',
+  'Cause and Effect Play',
+  'Reflective Conversation',
+  'Conversation',
+  'Large Motor Play',
+  'Interactive Games',
+  'Storytelling',
+  'Fine Motor Activities',
+  'Motor Planning Games',
+  'Community Activities',
+  'Social Groups/Outings',
+];

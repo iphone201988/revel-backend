@@ -92,6 +92,16 @@ router.get(
   providerController.viewPermission
 );
 
+router.put(
+  "/update-permissions",
+  auth,
+  authorization(Permission.ManagePermissions),
+  validate(providerSchema.updatePermissionsSchema),
+  providerController.updateProviderPermissions
+ 
+);
+
+
 router.post(
   "/addGoal",
   auth,
@@ -137,5 +147,12 @@ router.put("/logout", auth, auditLogs, providerController.logOut);
 
 router.get("/assigned", auth, providerController.getAssignedClients);
 
+
+router.put('/update-itp', 
+  auth,
+   authorization(Permission.AddEditClients),
+  validate(providerSchema.updateClientItpGoalSchema),
+  auditLogs,
+  providerController.updateClientItpGoal )
 
 export default router;

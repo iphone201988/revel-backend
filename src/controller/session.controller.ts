@@ -6,6 +6,152 @@ import Client from "../models/client.model.js";
 import { generateNotesWithAi } from "../aiSetup/genrateNotes.js";
 import GoalBank from "../models/goalbank.model.js";
 import Report from "../models/notes.model.js";
+import { SessionStatus } from "../utils/enums/enums.js";
+import { Activities } from "../models/activity.model.js";
+import { Supports } from "../models/supports.model.js";
+
+const addActivity = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { activity } = req.body;
+    const { user } = req;
+
+    if (!user.organizationId || !activity) {
+      return res.status(400).json({
+        message: "organizationId and activity are required",
+      });
+    }
+
+    const updatedActivities = await Activities.findOneAndUpdate(
+      { organizationId: user?.organizationId },
+      {
+        // $addToSet avoids duplicates
+        $addToSet: { activities: activity },
+      },
+      { new: true }
+    );
+
+    if (!updatedActivities) {
+      return res.status(404).json({
+        message: "Activities record not found for this organization",
+      });
+    }
+
+    res.status(200).json({
+      message: "Activity added successfully",
+      data: updatedActivities,
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler());
+  }
+};
+
+const addSupport = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { support } = req.body;
+    const { user } = req;
+    if (!user.organizationId || !support) {
+      return res.status(400).json({
+        message: "organizationId and support are required",
+      });
+    }
+    const updatedSupports = await Supports.findOneAndUpdate(
+      { organizationId: user.organizationId },
+      {
+        // Prevent duplicates
+        $addToSet: { supports: support },
+      },
+      { new: true }
+    );
+
+    if (!updatedSupports) {
+      return res.status(404).json({
+        message: "Supports record not found for this organization",
+      });
+    }
+
+    res.status(200).json({
+      message: "Support added successfully",
+      data: updatedSupports,
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler());
+  }
+};
+
+const getActivities = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+
+    if (!user?.organizationId) {
+      return res.status(400).json({
+        message: "organizationId is required",
+      });
+    }
+    const activities = await Activities.findOne(
+      { organizationId: user?.organizationId },
+      { activities: 1, _id: 0 }
+    );
+
+    if (!activities) {
+      return res.status(404).json({
+        message: "Activities record not found for this organization",
+      });
+    }
+
+    res.status(200).json({
+      message: "Activities fetched successfully",
+      data: activities.activities,
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler());
+  }
+};
+
+
+
+ const getSupports = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req
+
+    if (!user.organizationId) {
+      return res.status(400).json({
+        message: "organizationId is required",
+      });
+    }
+
+   
+
+    const supports = await Supports.findOne(
+      { organizationId: user?.organizationId },
+      { supports: 1, _id: 0 }
+    );
+
+    if (!supports) {
+      return res.status(404).json({
+        message: "Supports record not found for this organization",
+      });
+    }
+
+    res.status(200).json({
+      message: "Supports fetched successfully",
+      data: supports.supports,
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler());
+  }
+};
 
 const startSession = async (
   req: Request,
@@ -58,6 +204,8 @@ const collectSessionData = async (
       clientId,
       duration,
       providerObservation,
+      activityEngaged,
+      supportsObserved,
     } = req.body;
     const { user } = req;
 
@@ -67,6 +215,8 @@ const collectSessionData = async (
       clientId,
       duration,
       organizationId: user?.organizationId,
+      supportsObserved,
+      activityEngaged,
       providerObservation,
     });
 
@@ -76,8 +226,7 @@ const collectSessionData = async (
     return res.status(200).json({
       success: true,
       message: "Data Collected successfully..",
-      data: collectedData,
-      sessionData,
+      data: { collectedData, sessionData },
     });
   } catch (error) {
     console.log("error__", error);
@@ -270,7 +419,7 @@ const buildAIRequest = async (
       .populate("goals_dataCollection.goalId") // This populates the full GoalBank document
       .lean();
 
-    console.log(dataCollection?.goals_dataCollection, "data collection");
+    console.log(dataCollection, "data collection");
 
     const client = await Client.findById(session.client).lean();
 
@@ -327,7 +476,7 @@ const buildAIRequest = async (
     const itpGoalsData = await DataCollection.findOne({ sessionId }).populate({
       path: "goals_dataCollection.goalId",
     });
-  const report =   await Report.create({
+    const report = await Report.create({
       sessionId,
       plan: aiResponse?.clinicalNote?.plan,
       fedcObservation: aiResponse?.clinicalNote?.fedcObservations,
@@ -343,35 +492,74 @@ const buildAIRequest = async (
     return res.status(200).json({
       success: true,
       message: "Notes created successfully..",
-      data:{
-        aiResponse,itpGoalsData,reportId: report._id
-      } 
-      
+      data: {
+        aiResponse,
+        itpGoalsData,
+        reportId: report._id,
+      },
     });
   } catch (error) {
     next(error);
   }
 };
 
-
-const saveSignatureToReport = async( req: Request,
+const saveSignatureToReport = async (
+  req: Request,
   res: Response,
-  next: NextFunction)=>{
+  next: NextFunction
+) => {
   try {
-    const {reportId, signature} =  req.body;
-    const updatedReport =  await Report.findByIdAndUpdate(reportId, {$set: {signature:signature}});
+    const { reportId, signature } = req.body;
+    const updatedReport = await Report.findByIdAndUpdate(reportId, {
+      $set: { signature: signature },
+    });
 
-    return res.status(200).json({success:true, message:"Signature added to the report", data: updatedReport})
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Signature added to the report",
+        data: updatedReport,
+      });
   } catch (error) {
     console.log("error__", error);
-        next(new ErrorHandler());
+    next(new ErrorHandler());
   }
-}
+};
+
+const abandonSession = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionId } = req.query;
+    const { user } = req;
+
+    const session = await Session.findOneAndUpdate(
+      { _id: sessionId, organizationId: user?.organizationId },
+      { $set: { status: SessionStatus.Abandon } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Session Abandoned Sucessfully..",
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler());
+  }
+};
 export const sessionController = {
   startSession,
   collectSessionData,
   viewAllSessions,
   viewClientSessions,
   buildAIRequest,
-  saveSignatureToReport
+  saveSignatureToReport,
+  abandonSession,
+  addActivity,
+  addSupport,
+  getActivities,
+getSupports
 };

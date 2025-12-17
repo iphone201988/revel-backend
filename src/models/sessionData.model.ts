@@ -18,19 +18,27 @@ const sessionDataModel = new mongoose.Schema(
           type: Number,
           //   enum: [SessionGoal.Missed, SessionGoal.Successfull],
         },
-        supportLevel: [
-          {
-            independent: {
-              type: Number,
-            },
-            minimal: {
-              type: Number,
-            },
-            modrate: {
-              type: Number,
-            },
+        total: {
+          type: Number,
+        },
+        supportLevel: {
+          independent: {
+            count: { type: Number },
+            missed: { type: Number },
+            success: { type: Number },
           },
-        ],
+          minimal: {
+            count: { type: Number },
+            miss: { type: Number },
+            success: { type: Number },
+          },
+          modrate: {
+            count: { type: Number },
+            miss: { type: Number },
+            success: { type: Number },
+          },
+        },
+
         counter: {
           type: Number,
         },
@@ -49,17 +57,16 @@ const sessionDataModel = new mongoose.Schema(
     },
     activityEngaged: {
       type: [String],
-      
     },
-    supportsObserved:{
-      type:[String]
+    supportsObserved: {
+      type: [String],
     },
-    duration:{
-      type:Number // in seconds
+    duration: {
+      type: Number, // in seconds
     },
-    providerObservation:{
-      type:String
-    }
+    providerObservation: {
+      type: String,
+    },
   },
 
   { timestamps: true }

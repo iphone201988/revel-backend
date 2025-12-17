@@ -72,13 +72,22 @@ ${therapistNotes || "None"}
 GOAL DATA
 ========================
 ${sessionData?.goals?.map((goal, index) => {
-  const supportLevels = goal.supportLevel?.map(level => {
-    const parts = [];
-    if (level.independent) parts.push(`Independent: ${level.independent}`);
-    if (level.minimal) parts.push(`Minimal: ${level.minimal}`);
-    if (level.moderate) parts.push(`Moderate: ${level.moderate}`);
-    return parts.join(", ");
-  }).join(" | ") || "Not recorded";
+ const sl = goal.supportLevel || {};
+
+const supportLevels = [
+  sl.independent
+    ? `Independent (Trials: ${sl.independent.count}, Success: ${sl.independent.success}, Missed: ${sl.independent.missed})`
+    : null,
+  sl.minimal
+    ? `Minimal (Trials: ${sl.minimal.count}, Success: ${sl.minimal.success}, Miss: ${sl.minimal.miss})`
+    : null,
+  sl.modrate
+    ? `Moderate (Trials: ${sl.modrate.count}, Success: ${sl.modrate.success}, Miss: ${sl.modrate.miss})`
+    : null,
+]
+  .filter(Boolean)
+  .join(" | ") || "Not recorded";
+
 
   return `
 Goal Index: ${index + 1}

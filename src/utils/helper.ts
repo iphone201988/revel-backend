@@ -171,7 +171,7 @@ export const getClientIp = (req: Request): string => {
   if (typeof forwarded === "string") {
     return forwarded.split(",")[0].trim();
   }
-
+  
   // Case 3 → fallback
   return req.socket.remoteAddress || req.ip || "Unknown";
 };

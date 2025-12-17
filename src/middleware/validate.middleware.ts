@@ -6,6 +6,7 @@ export const validate = (schema:any)=>{
     return (req: Request, res: Response, next: NextFunction)=>{
        try {
            if (schema.body) {
+            console.log("req.body:::",req.body)
         const { error } = schema.body.validate(req.body, { abortEarly: false });
         if (!req.body) {
           return next(new ErrorHandler("Request body is undifined", 400));

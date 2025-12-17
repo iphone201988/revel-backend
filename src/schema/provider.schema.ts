@@ -105,7 +105,8 @@ const addClientSchema = {
       "any.required": "Country code is required.",
     }),
 
-   assignedProvider: joi.array()
+    assignedProvider: joi
+      .array()
       .items(
         joi.string().length(24).hex().messages({
           "string.length": "Provider Id must be 24 characters",
@@ -120,14 +121,14 @@ const addClientSchema = {
         "any.required": "Assigned provider is required",
       }),
 
-   qsp:joi.string().required().length(24).hex().messages({
+    qsp: joi.string().required().length(24).hex().messages({
       "any.required": "assigned QSP Id is required",
       "string.empty": "assigned QSP Id cannot be empty",
       "string.length": "assigned QSP Id must be exactly 24 characters",
       "string.hex": "assigned QSP Id must be a valid hex string",
     }),
 
-  clinicalSupervisor: joi.string().required().length(24).hex().messages({
+    clinicalSupervisor: joi.string().required().length(24).hex().messages({
       "any.required": "assigned Supervisor Id is required",
       "string.empty": "assigned Supervisor Id cannot be empty",
       "string.length": "assigned Supervisor Id must be exactly 24 characters",
@@ -273,15 +274,6 @@ const updateProviderSchema = {
       licenseNumber: joi.string().optional().trim().messages({
         "string.base": "License number must be a string",
       }),
-
-      permissions: joi
-        .array()
-        .optional()
-        .items(joi.string().valid(...Object.values(Permission)))
-        .messages({
-          "array.base": "Permissions must be an array",
-          "any.only": "One or more permissions are invalid",
-        }),
     })
     .min(1)
     .messages({
@@ -289,77 +281,159 @@ const updateProviderSchema = {
     }),
 };
 
-const updateClientSchema = {
+
+ const updateClientSchema = {
   query: joi.object({
     clientId: joi.string().length(24).hex().required().messages({
-      "any.required": "clientId is required",
-      "string.length": "clientId must be 24 characters long",
-      "string.hex": "clientId must be a valid MongoDB ObjectId",
-      "string.empty": "clientId cannot be empty",
+      "any.required": "Client ID is required",
+      "string.empty": "Client ID cannot be empty",
+      "string.length": "Client ID must be exactly 24 characters",
+      "string.hex": "Client ID must be a valid MongoDB ObjectId",
     }),
   }),
 
   body: joi.object({
     name: joi.string().messages({
       "string.base": "Name must be a string",
+      "string.empty": "Name cannot be empty",
     }),
 
     dob: joi.date().messages({
-      "date.base": "Invalid date format for dob",
+      "date.base": "Date of birth must be a valid date",
     }),
 
     diagnosis: joi.string().messages({
       "string.base": "Diagnosis must be a string",
+      "string.empty": "Diagnosis cannot be empty",
     }),
 
     parentName: joi.string().messages({
       "string.base": "Parent name must be a string",
+      "string.empty": "Parent name cannot be empty",
     }),
 
     email: joi.string().email().messages({
-      "string.email": "Email must be valid",
+      "string.base": "Email must be a string",
+      "string.email": "Email must be a valid email address",
+      "string.empty": "Email cannot be empty",
     }),
 
     phone: joi.string().messages({
-      "string.base": "Phone must be a string",
+      "string.base": "Phone number must be a string",
+      "string.empty": "Phone number cannot be empty",
     }),
 
     countryCode: joi.string().messages({
       "string.base": "Country code must be a string",
+      "string.empty": "Country code cannot be empty",
     }),
 
-    assignedProvider: joi
-      .array()
-      .items(
-        joi.string().length(24).hex().messages({
-          "string.length": "Each assigned provider must be 24 characters long",
-          "string.hex": "Each assigned provider must be a valid ObjectId",
-        })
-      )
-      .messages({
-        "array.base": "Assigned providers must be an array of ObjectIds",
-      }),
+    assignedProvider: joi.array().items(
+      joi.string().length(24).hex().messages({
+        "string.length": "Assigned provider ID must be 24 characters",
+        "string.hex": "Assigned provider ID must be a valid ObjectId",
+      })
+    ).messages({
+      "array.base": "Assigned provider must be an array of provider IDs",
+    }),
 
     qsp: joi.string().length(24).hex().messages({
-      "string.length": "QSP must be 24 characters long",
-      "string.hex": "QSP must be a valid ObjectId",
+      "string.length": "QSP ID must be 24 characters",
+      "string.hex": "QSP ID must be a valid ObjectId",
     }),
 
     clinicalSupervisor: joi.string().length(24).hex().messages({
-      "string.length": "Clinical Supervisor must be 24 characters long",
-      "string.hex": "Clinical Supervisor must be a valid ObjectId",
+      "string.length": "Clinical supervisor ID must be 24 characters",
+      "string.hex": "Clinical supervisor ID must be a valid ObjectId",
     }),
 
     reviewDate: joi.date().messages({
       "date.base": "Review date must be a valid date",
     }),
 
-    organizationId: joi.string().length(24).hex().messages({
-      "string.length": "OrganizationId must be 24 characters long",
-      "string.hex": "OrganizationId must be a valid ObjectId",
+    criteria: joi.object({
+      masteryPercentage: joi.number().min(1).max(100).messages({
+        "number.base": "Mastery percentage must be a number",
+        "number.min": "Mastery percentage must be at least 1",
+        "number.max": "Mastery percentage cannot exceed 100",
+      }),
+
+      sessionCount: joi.number().min(1).messages({
+        "number.base": "Session count must be a number",
+        "number.min": "Session count must be at least 1",
+      }),
+    }).messages({
+      "object.base": "Criteria must be an object",
+    }),
+     clientProfile: joi.object({
+      interests: joi.string().allow("").messages({
+        "string.base": "Interests must be a string",
+      }),
+      strengths: joi.string().allow("").messages({
+        "string.base": "Strengths must be a string",
+      }),
+      challenges: joi.string().allow("").messages({
+        "string.base": "Challenges must be a string",
+      }),
+      familyContext: joi.string().allow("").messages({
+        "string.base": "Family Context must be a string",
+      }),
+      preferredActivities: joi.string().allow("").messages({
+        "string.base": "Preferred Activities must be a string",
+      }),
+      sensoryProcessing: joi.string().allow("").messages({
+        "string.base": "Sensory Processing must be a string",
+      }),
+      communication: joi.string().allow("").messages({
+        "string.base": "Communication must be a string",
+      }),
+      safetyConsiderations: joi.string().allow("").messages({
+        "string.base": "Safety Considerations must be a string",
+      }),
+    }).messages({
+      "object.base": "Client Profile must be an object",
+    }),
+  })
+    .min(1)
+    .messages({
+      "object.min": "At least one field is required to update the client",
+    }),
+};
+
+
+
+ const updateClientItpGoalSchema = {
+  query: joi.object({
+    clientId: joi.string().length(24).hex().required().messages({
+      "any.required": "Client ID is required",
+      "string.empty": "Client ID cannot be empty",
+      "string.length": "Client ID must be a valid 24 character ObjectId",
+      "string.hex": "Client ID must be a valid ObjectId",
+    }),
+
+    itpGoalId: joi.string().length(24).hex().required().messages({
+      "any.required": "ITP Goal ID is required",
+      "string.empty": "ITP Goal ID cannot be empty",
+      "string.length": "ITP Goal ID must be a valid 24 character ObjectId",
+      "string.hex": "ITP Goal ID must be a valid ObjectId",
+    }),
+  }),
+
+  body: joi.object({
+    targetDate: joi.date().optional().messages({
+      "any.required": "Target date is required",
+      "date.base": "Target date must be a valid date",
+    }),
+
+    baselinePercentage: joi.number().min(0).max(100).optional().messages({
+      "any.required": "Baseline percentage is required",
+      "number.base": "Baseline percentage must be a number",
+      "number.min": "Baseline percentage cannot be less than 0",
+      "number.max": "Baseline percentage cannot be greater than 100",
     }),
   }),
 };
+
 
 const setUpProviderAccountSchema = {
   body: joi.object({
@@ -386,41 +460,27 @@ const addGoalBankSchema = {
       "string.min": "Description must be at least 2 characters.",
       "any.required": "Description is required.",
     }),
-    masteryBaseline: joi
-          .number()
-          .min(0)
-          .max(100)
-          .required()
-          .messages({
-            "number.base": "Mastery Baseline must be a number.",
-            "number.min": "Mastery Baseline must be at least 1.",
-            "number.max": "Mastery Baseline cannot exceed 100.",
-            "any.required": "Mastery Baseline is required.",
-          }),
+    masteryBaseline: joi.number().min(0).max(100).required().messages({
+      "number.base": "Mastery Baseline must be a number.",
+      "number.min": "Mastery Baseline must be at least 1.",
+      "number.max": "Mastery Baseline cannot exceed 100.",
+      "any.required": "Mastery Baseline is required.",
+    }),
 
-   criteriaForMastry: joi
+    criteriaForMastry: joi
       .object({
-        masteryPercentage: joi
-          .number()
-          .min(1)
-          .max(100)
-          .required()
-          .messages({
-            "number.base": "Mastery percentage must be a number.",
-            "number.min": "Mastery percentage must be at least 1.",
-            "number.max": "Mastery percentage cannot exceed 100.",
-            "any.required": "Mastery percentage is required.",
-          }),
+        masteryPercentage: joi.number().min(1).max(100).required().messages({
+          "number.base": "Mastery percentage must be a number.",
+          "number.min": "Mastery percentage must be at least 1.",
+          "number.max": "Mastery percentage cannot exceed 100.",
+          "any.required": "Mastery percentage is required.",
+        }),
 
-        acrossSession: joi
-          .number()
-          .min(1)
-          .required()
-          .messages({
-            "number.base": "Across session must be a number.",
-            "number.min": "Across session must be at least 1.",
-            "any.required": "Across session is required.",
-          }),
+        acrossSession: joi.number().min(1).required().messages({
+          "number.base": "Across session must be a number.",
+          "number.min": "Across session must be at least 1.",
+          "any.required": "Across session is required.",
+        }),
 
         supportLevel: joi
           .string()
@@ -443,19 +503,15 @@ const addGoalBankSchema = {
   }),
 };
 
- const editGoalBankSchema = {
+const editGoalBankSchema = {
   query: joi.object({
-    goalId: joi
-      .string()
-      .hex()
-      .length(24)
-      .required()
-      .messages({
-        "string.base": "goalId must be a string.",
-        "string.hex": "goalId must contain only valid hexadecimal characters.",
-        "string.length": "goalId must be exactly 24 characters long (MongoDB ObjectId).",
-        "any.required": "goalId is required.",
-      }),
+    goalId: joi.string().hex().length(24).required().messages({
+      "string.base": "goalId must be a string.",
+      "string.hex": "goalId must contain only valid hexadecimal characters.",
+      "string.length":
+        "goalId must be exactly 24 characters long (MongoDB ObjectId).",
+      "any.required": "goalId is required.",
+    }),
   }),
 
   body: joi.object({
@@ -467,35 +523,24 @@ const addGoalBankSchema = {
         "any.only": "Invalid category value.",
       }),
 
-    discription: joi
-      .string()
-      .trim()
-      .min(2)
-      .messages({
-        "string.base": "Description must be a string.",
-        "string.empty": "Description cannot be empty.",
-        "string.min": "Description must be at least 2 characters long.",
-      }),
+    discription: joi.string().trim().min(2).messages({
+      "string.base": "Description must be a string.",
+      "string.empty": "Description cannot be empty.",
+      "string.min": "Description must be at least 2 characters long.",
+    }),
 
     criteriaForMastry: joi
       .object({
-        masteryPercentage: joi
-          .number()
-          .min(1)
-          .max(100)
-          .messages({
-            "number.base": "Mastery percentage must be a number.",
-            "number.min": "Mastery percentage must be at least 1.",
-            "number.max": "Mastery percentage cannot exceed 100.",
-          }),
+        masteryPercentage: joi.number().min(1).max(100).messages({
+          "number.base": "Mastery percentage must be a number.",
+          "number.min": "Mastery percentage must be at least 1.",
+          "number.max": "Mastery percentage cannot exceed 100.",
+        }),
 
-        acrossSession: joi
-          .number()
-          .min(1)
-          .messages({
-            "number.base": "Across session must be a number.",
-            "number.min": "Across session must be at least 1.",
-          }),
+        acrossSession: joi.number().min(1).messages({
+          "number.base": "Across session must be a number.",
+          "number.min": "Across session must be at least 1.",
+        }),
 
         supportLevel: joi
           .string()
@@ -515,64 +560,121 @@ const addGoalBankSchema = {
   }),
 };
 
-const  getClientProfileSchema = {
+const getClientProfileSchema = {
   query: joi.object({
-     clientId : joi.string().required().length(24).hex().messages({
-        "string.base": "Client Id must be a string.",
-        "string.hex": "Client Id must contain only valid hexadecimal characters.",
-        "string.length": "Client Id must be exactly 24 characters long (MongoDB ObjectId).",
-        "any.required": "Client Id is required.",
-        "string.empty":"Client Id cannot be empty"
-      }),
-  })
-}
-
-const addItpGoalsToClientSchema = {
-  body: joi.object({
-     goalId: joi.string().required().length(24).hex().messages({
-        "string.base": "goal Id must be a string.",
-        "string.hex": "goal Id must contain only valid hexadecimal characters.",
-        "string.length": "goal Id must be exactly 24 characters long (MongoDB ObjectId).",
-        "any.required": "goal Id is required.",
-        "string.empty":"goal Id cannot be empty"
-      }), 
-       clientId:joi.string().required().length(24).hex().messages({
-        "string.base": "client Id must be a string.",
-        "string.hex": "client Id must contain only valid hexadecimal characters.",
-        "string.length": "client Id must be exactly 24 characters long (MongoDB ObjectId).",
-        "any.required": "client Id is required.",
-        "string.empty":"client Id cannot be empty"
-      }),
-      targetDate:joi.date().iso().greater("now").required().messages({
-      "date.base": "Target Date must be a valid date.",
-      "date.less": "Target Date must be in the future.",
-      "any.required": "Target Date is required.",
+    clientId: joi.string().required().length(24).hex().messages({
+      "string.base": "Client Id must be a string.",
+      "string.hex": "Client Id must contain only valid hexadecimal characters.",
+      "string.length":
+        "Client Id must be exactly 24 characters long (MongoDB ObjectId).",
+      "any.required": "Client Id is required.",
+      "string.empty": "Client Id cannot be empty",
     }),
-    baselinePercentage: joi.number()
-  .strict()
-  .min(1)
-  .max(100)
-  .required()
-  .messages({
-    "number.base": "Baseline percentage must be a valid number.",
-    "number.min": "Baseline percentage must be at least 1.",
-    "number.max": "Baseline percentage must not exceed 100.",
-    "any.required": "Baseline percentage is required.",
-  })
+  }),
+};
 
-  })
-}
-const viewPermissionSchema = {
-   query: joi.object({
-     providerId : joi.string().required().length(24).hex().messages({
-        "string.base": "Provider Id must be a string.",
-        "string.hex": "Provider Id must contain only valid hexadecimal characters.",
-        "string.length": "Provider Id must be exactly 24 characters long (MongoDB ObjectId).",
-        "any.required": "Provider Id is required.",
-        "string.empty":"Provider Id cannot be empty"
+
+
+ const addItpGoalsToClientSchema = {
+  body: joi.object({
+    clientId: joi.string().length(24).hex().required().messages({
+      "any.required": "Client ID is required",
+      "string.empty": "Client ID cannot be empty",
+      "string.length": "Client ID must be 24 characters",
+      "string.hex": "Client ID must be a valid ObjectId",
+    }),
+
+    goalId: joi.string().length(24).hex().optional().messages({
+      "string.length": "Goal ID must be 24 characters",
+      "string.hex": "Goal ID must be a valid ObjectId",
+    }),
+
+    // Required only when goalId is NOT present
+    category: joi.when("goalId", {
+      is: joi.exist(),
+      then: joi.forbidden().messages({
+        "any.unknown": "Category is not allowed when goalId is provided",
       }),
-  })
-}
+      otherwise: joi.string().required().messages({
+        "any.required": "Category is required when creating a new goal",
+        "string.empty": "Category cannot be empty",
+      }),
+    }),
+
+    discription: joi.when("goalId", {
+      is: joi.exist(),
+      then: joi.forbidden(),
+      otherwise: joi.string().required().messages({
+        "any.required": "Description is required when creating a new goal",
+        "string.empty": "Description cannot be empty",
+      }),
+    }),
+
+    criteriaForMastry: joi.when("goalId", {
+      is: joi.exist(),
+      then: joi.forbidden(),
+      otherwise: joi.object({
+        masteryPercentage: joi.number().min(1).max(100).required().messages({
+          "number.base": "Mastery percentage must be a number",
+          "number.min": "Mastery percentage must be at least 1",
+          "number.max": "Mastery percentage cannot exceed 100",
+        }),
+        acrossSession: joi.number().min(1).required().messages({
+          "number.base": "Across session must be a number",
+          "number.min": "Across session must be at least 1",
+        }),
+        supportLevel: joi.string().required().messages({
+          "any.required": "Support level is required",
+        }),
+      }).required().messages({
+        "any.required": "Criteria for mastery is required when creating a new goal",
+      }),
+    }),
+
+    targetDate: joi.date().required().messages({
+      "any.required": "Target date is required",
+      "date.base": "Target date must be a valid date",
+    }),
+
+    baselinePercentage: joi.number().min(0).max(100).required().messages({
+      "any.required": "Baseline percentage is required",
+      "number.base": "Baseline percentage must be a number",
+      "number.min": "Baseline percentage cannot be less than 0",
+      "number.max": "Baseline percentage cannot exceed 100",
+    }),
+  }),
+};
+
+const viewPermissionSchema = {
+  query: joi.object({
+    providerId: joi.string().required().length(24).hex().messages({
+      "string.base": "Provider Id must be a string.",
+      "string.hex":
+        "Provider Id must contain only valid hexadecimal characters.",
+      "string.length":
+        "Provider Id must be exactly 24 characters long (MongoDB ObjectId).",
+      "any.required": "Provider Id is required.",
+      "string.empty": "Provider Id cannot be empty",
+    }),
+  }),
+};
+
+const updatePermissionsSchema = {
+  body: joi.object({
+    providerId: joi.string().length(24).hex().required().messages({
+      "any.required": "providerId is required",
+      "string.length": "providerId must be a valid ObjectId",
+    }),
+    permissions: joi
+      .array()
+      .required()
+      .items(joi.string().valid(...Object.values(Permission)))
+      .messages({
+        "array.base": "Permissions must be an array",
+        "any.only": "One or more permissions are invalid",
+      }),
+  }),
+};
 
 export const providerSchema = {
   loginSchema,
@@ -587,5 +689,7 @@ export const providerSchema = {
   editGoalBankSchema,
   getClientProfileSchema,
   addItpGoalsToClientSchema,
-  viewPermissionSchema
+  updatePermissionsSchema,
+  updateClientItpGoalSchema,
+  viewPermissionSchema,
 };

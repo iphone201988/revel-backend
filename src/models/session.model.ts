@@ -1,5 +1,5 @@
 import mongoose, { mongo } from "mongoose";
-import { SessionType } from "../utils/enums/enums.js";
+import { SessionStatus, SessionType } from "../utils/enums/enums.js";
 
 const sessionModel = new mongoose.Schema({
   client: {
@@ -35,6 +35,11 @@ const sessionModel = new mongoose.Schema({
   organizationId:{
     type: mongoose.Schema.Types.ObjectId,
     ref:"Organization"
+  },
+  status:{
+    type :String,
+    enum: [SessionStatus.Active, SessionStatus.Deleted,SessionStatus.Abandon],
+    default: SessionStatus.Active
   }
 
 });

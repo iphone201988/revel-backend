@@ -8,9 +8,11 @@ import {
   textForVerifyMail,
 } from "../utils/MailTemplate.js";
 import {
+  activityOptions,
   ClinicRole,
   Permission,
   Status,
+  supportsOptions,
   SystemRoles,
   User_Status,
 } from "../utils/enums/enums.js";
@@ -18,6 +20,8 @@ import Client from "../models/client.model.js";
 import Provider from "../models/provider.model.js";
 import Session from "../models/session.model.js";
 import DataCollection from "../models/sessionData.model.js";
+import { Activities } from "../models/activity.model.js";
+import { Supports } from "../models/supports.model.js";
 
 const registerOrganization = async (
   req: Request,
@@ -87,6 +91,16 @@ const registerOrganization = async (
       permissions: allPermissions,
     });
     await provider.save();
+    await Activities.create({
+      organizationId: newClinic._id,
+      activities: activityOptions,
+    });
+
+    await Supports.create({
+      organizationId: newClinic._id,
+      supports: supportsOptions,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Clinic Register Successfully..",
@@ -99,35 +113,45 @@ const registerOrganization = async (
   }
 };
 
-
-const reportsOverview = async(  req: Request,
+const reportsOverview = async (
+  req: Request,
   res: Response,
-  next: NextFunction)=>{
+  next: NextFunction
+) => {
   try {
-    const {user} = req
-  const toatlSession = await Session.countDocuments({organizationId: user?.organizationId});
-  const totalTimeResult = await DataCollection.aggregate([
-  { 
-    $match: { organizationId: user.organizationId } // optional filter
-  },
-  {
-    $group: {
-      _id: null,
-      totalTime: { $sum: "$duration" } // replace "duration" with your field name
-    }
-  }
-]);
+    const { user } = req;
+    const toatlSession = await Session.countDocuments({
+      organizationId: user?.organizationId,
+    });
+    const totalTimeResult = await DataCollection.aggregate([
+      {
+        $match: { organizationId: user.organizationId }, // optional filter
+      },
+      {
+        $group: {
+          _id: null,
+          totalTime: { $sum: "$duration" }, // replace "duration" with your field name
+        },
+      },
+    ]);
 
-const totalTime = totalTimeResult[0]?.totalTime || 0
+    const totalTime = totalTimeResult[0]?.totalTime || 0;
 
-const totalClients =  await Client.countDocuments({organizationId:user?.organizationId, userStatus: User_Status.Active})
-const totalProviders = await Provider.countDocuments({organizationId:user?.organizationId, userStatus: User_Status.Active})
-
+    const totalClients = await Client.countDocuments({
+      organizationId: user?.organizationId,
+      userStatus: User_Status.Active,
+    });
+    const totalProviders = await Provider.countDocuments({
+      organizationId: user?.organizationId,
+      userStatus: User_Status.Active,
+    });
   } catch (error) {
-  console.log("error__", error);
-     next(new ErrorHandler());
+    console.log("error__", error);
+    next(new ErrorHandler());
   }
-}
+};
+
+
 export const orgController = {
   registerOrganization,
 };

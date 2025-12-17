@@ -81,7 +81,7 @@ const getUserProfile = async (
 const verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { otp, email } = req.body;
-    console.log(email)
+    console.log(email);
 
     const Email = email.toLowerCase();
     const provider = await Provider.findOne({
@@ -146,7 +146,9 @@ const sendOtp = async (req: Request, res: Response, next: NextFunction) => {
 const getClients = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { user } = req;
-    const clients = await Client.find({ organizationId: user?.organizationId }).populate('qsp');
+    const clients = await Client.find({
+      organizationId: user?.organizationId,
+    }).populate("qsp");
     if (!clients.length) {
       return next(new ErrorHandler("Clients not found", 400));
     }
@@ -169,7 +171,11 @@ const getClientProfie = async (
     const { clientId } = req.query;
     const client = await Client.findById(clientId)
       .populate("assignedProvider")
-      .populate("clinicalSupervisor");
+      .populate("clinicalSupervisor")
+      .populate({
+        path: "itpGoals.goal",
+        model: "GoalBank",
+      });
 
     if (!client) {
       return next(new ErrorHandler("Client not found", 400));
@@ -204,21 +210,21 @@ const addClient = async (req: Request, res: Response, next: NextFunction) => {
       ? [...new Set(assignedProvider)]
       : [assignedProvider];
 
-      function calculateAge(dob) {
-  const birthDate = new Date(dob);
-  const today = new Date();
+    function calculateAge(dob) {
+      const birthDate = new Date(dob);
+      const today = new Date();
 
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  const dayDiff = today.getDate() - birthDate.getDate();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
 
-  // If birthday not reached yet this year → subtract 1
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-    age--;
-  }
+      // If birthday not reached yet this year → subtract 1
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        age--;
+      }
 
-  return age;
-}
+      return age;
+    }
     const client = new Client({
       name,
       diagnosis,
@@ -260,26 +266,43 @@ const updateClient = async (
       return next(new ErrorHandler("ClientId is required", 400));
     }
 
-    const client:any = await Client.findById(clientId);
+    const client: any = await Client.findById(clientId);
     if (!client) {
       return next(new ErrorHandler("Client not found", 404));
     }
 
-    // ✅ Handle assignedProvider separately
+    let providerUpdated = false;
+    let clientUpdated = false;
 
-    if (updateData.assignedProvider) {
-      const providers = Array.isArray(updateData.assignedProvider)
-        ? updateData.assignedProvider
-        : [updateData.assignedProvider];
-
+    // 🔹 Assigned Provider (REPLACE ARRAY – your original logic)
+    if (Array.isArray(updateData.assignedProvider)) {
       client.assignedProvider = [
-        ...new Set(providers.map((id: string) => new Types.ObjectId(id))),
+        ...new Set(
+          updateData.assignedProvider.map(
+            (id: string) => new Types.ObjectId(id)
+          )
+        ),
       ];
-
+      providerUpdated = true;
       delete updateData.assignedProvider;
     }
+    // 🔹 Client Profile fields update
+    let clientProfileUpdated = false;
+    if (
+      updateData.clientProfile &&
+      typeof updateData.clientProfile === "object"
+    ) {
+      client.clientProfile = client.clientProfile || {};
+      for (const key of Object.keys(updateData.clientProfile)) {
+        if (updateData.clientProfile[key] !== undefined) {
+          client.clientProfile[key] = updateData.clientProfile[key];
+          clientProfileUpdated = true;
+        }
+      }
+      delete updateData.clientProfile;
+    }
 
-    // ✅ Allowed fields only (avoid mass assignment bugs)
+    // 🔹 Allowed client fields
     const allowedFields = [
       "name",
       "dob",
@@ -291,27 +314,67 @@ const updateClient = async (
       "qsp",
       "clinicalSupervisor",
       "reviewDate",
-      "itpGoals",
       "criteria",
-     
     ];
 
     allowedFields.forEach((field) => {
       if (updateData[field] !== undefined) {
         client.set(field, updateData[field]);
+        clientUpdated = true;
       }
     });
 
-    await client.save();
+    // ✅ SAVE if any changes
+    if (clientUpdated || providerUpdated || clientProfileUpdated) {
+      await client.save();
+    }
+
+    const updatedClient = await Client.findById(clientId);
 
     return res.status(200).json({
       success: true,
       message: "Client updated successfully",
-      data: client,
+      data: updatedClient,
     });
   } catch (error) {
-    console.log(error, "error__");
+    console.log(error);
     next(new ErrorHandler("Failed to update client", 500));
+  }
+};
+
+const updateClientItpGoal = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { clientId, itpGoalId }: any = req.query;
+    const { targetDate, baselinePercentage } = req.body;
+
+    const result = await Client.updateOne(
+      {
+        _id: new mongoose.Types.ObjectId(clientId),
+        "itpGoals._id": new mongoose.Types.ObjectId(itpGoalId),
+      },
+      {
+        $set: {
+          "itpGoals.$.targetDate": targetDate,
+          "itpGoals.$.baselinePercentage": baselinePercentage,
+        },
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return next(new ErrorHandler("ITP goal not found for this client", 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "ITP goal updated successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    next(new ErrorHandler("Failed to update ITP goal", 500));
   }
 };
 
@@ -323,7 +386,7 @@ const getProviders = async (
   try {
     const { user } = req;
 
-    const providers:any = await Provider.find({
+    const providers: any = await Provider.find({
       organizationId: user?.organizationId,
     }).lean(); // lean for faster JSON objects
 
@@ -473,7 +536,7 @@ const updateProvider = async (
       return next(new ErrorHandler(" Provider not found", 400));
     }
     // if (provider?.systemRole ===SystemRoles?.SuperAdmin) {
-      
+
     // }
     if (updateData.permissions) {
       updateData.permissions.forEach((perm) => {
@@ -523,11 +586,54 @@ const viewPermission = async (
     next(new ErrorHandler());
   }
 };
+const updateProviderPermissions = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { providerId, permissions } = req.body;
+
+    if (!providerId) {
+      return next(new ErrorHandler("providerId is required", 400));
+    }
+
+    if (!Array.isArray(permissions)) {
+      return next(new ErrorHandler("permissions must be an array", 400));
+    }
+
+    const provider = await Provider.findById(providerId);
+    if (!provider) {
+      return next(new ErrorHandler("Provider not found", 404));
+    }
+
+    // 🔒 Super Admin protection
+    if (provider.systemRole === SystemRoles.SuperAdmin) {
+      return next(
+        new ErrorHandler("Super Admin permissions cannot be modified", 403)
+      );
+    }
+
+    // ✅ REPLACE permissions (idempotent)
+    provider.permissions = permissions;
+
+    await provider.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Permissions updated successfully",
+      data: provider.permissions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const addGoalBank = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { user } = req;
-    const { category, discription, criteriaForMastry ,masteryBaseline} = req.body;
+    const { category, discription, criteriaForMastry, masteryBaseline } =
+      req.body;
 
     const duplicateGoal = await GoalBank.findOne({
       category,
@@ -547,7 +653,7 @@ const addGoalBank = async (req: Request, res: Response, next: NextFunction) => {
       discription,
       criteriaForMastry,
       organizationId: user.organizationId,
-      masteryBaseline
+      masteryBaseline,
     });
 
     return res.status(201).json({
@@ -649,24 +755,60 @@ const addItpGoalsToClient = async (
 ) => {
   try {
     const { user } = req;
-    const { goalId, targetDate, baselinePercentage, clientId } = req.body;
-    const goal = await GoalBank.find({
-      organizationId: user?.organizationId,
-      _id: goalId,
-    });
+    const {
+      clientId,
+      goalId,
+      targetDate,
+      baselinePercentage,
+      category,
+      discription,
+      criteriaForMastry,
+    } = req.body;
 
-    if (!goal) {
-      return next(new ErrorHandler("Goal not found", 400));
+    let finalGoalId = goalId;
+
+    // 🔹 Create GoalBank goal if goalId not provided
+    if (!goalId) {
+      const newGoal = await GoalBank.create({
+        category,
+        discription,
+        criteriaForMastry,
+        organizationId: user?.organizationId,
+      });
+
+      finalGoalId = newGoal._id;
+    }
+    // 🔹 Validate existing GoalBank goal
+    else {
+      const goal = await GoalBank.findOne({
+        _id: goalId,
+        organizationId: user?.organizationId,
+      });
+
+      if (!goal) {
+        return next(new ErrorHandler("Goal not found", 404));
+      }
     }
 
+    // 🔹 Prevent duplicate assignment
+    const alreadyAssigned = await Client.findOne({
+      _id: clientId,
+      "itpGoals.goal": finalGoalId,
+    });
+
+    if (alreadyAssigned) {
+      return next(
+        new ErrorHandler("Goal already assigned to this client", 400)
+      );
+    }
+
+    // 🔹 Assign goal to client
     const client = await Client.findOneAndUpdate(
-      {
-        _id: clientId,
-      },
+      { _id: clientId },
       {
         $push: {
           itpGoals: {
-            goal: goalId,
+            goal: finalGoalId,
             targetDate,
             baselinePercentage,
           },
@@ -674,14 +816,15 @@ const addItpGoalsToClient = async (
       },
       { new: true }
     );
-    return res.status(200).json({
+
+    res.status(200).json({
       success: true,
-      message: "Goal assgined to Client",
+      message: "Goal assigned to client successfully",
       data: client,
     });
   } catch (error) {
-    console.log("error__", error);
-    next(new ErrorHandler());
+    console.error(error);
+    next(new ErrorHandler("Failed to assign goal to client", 500));
   }
 };
 
@@ -709,13 +852,13 @@ const getAssignedClients = async (
 ) => {
   try {
     const { userId } = req;
-   const assignedClients = await Client.find({
-  $or: [
-    { qsp: userId },
-    { clinicalSupervisor: userId },
-    { assignedProvider: { $in: [userId] } }, // check in array
-  ],
-});
+    const assignedClients = await Client.find({
+      $or: [
+        { qsp: userId },
+        { clinicalSupervisor: userId },
+        { assignedProvider: { $in: [userId] } }, // check in array
+      ],
+    });
 
     if (!assignedClients.length) {
       return next(new ErrorHandler("Assigned Clients not found.", 400));
@@ -750,5 +893,7 @@ export const providerController = {
   getClientProfie,
   addItpGoalsToClient,
   logOut,
+  updateProviderPermissions,
   getAssignedClients,
+  updateClientItpGoal,
 };

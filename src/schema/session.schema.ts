@@ -32,7 +32,7 @@ const startSessionSchema = {
         "string.empty": "Start time cannot be empty.",
       }),
 
-      endTime: joi.date().greater("now").required().messages({
+      endTime: joi.date().required().messages({
         "any.required": "End time is required.",
         "string.empty": "End time cannot be empty.",
       }),
@@ -41,7 +41,7 @@ const startSessionSchema = {
         "string.base": "Client variables must be text.",
       }),
 
-      present: joi.string().trim().max(255).optional().messages({
+      present: joi.string().trim().max(255).optional().allow("").messages({
         "string.base": "Presence information must be a text value.",
         "string.max": "Presence information must not exceed 255 characters.",
       }),
@@ -65,40 +65,41 @@ const collectSessionDataSchema = {
       "any.required": "Duration is required.",
     }),
 
-    providerObservation: joi.string().optional().messages({}), // add messagess....
+    providerObservation: joi.string().allow("").optional().messages({}), // add messagess....
     clientId: joi.string().required().hex().length(24).messages({
       "any.required": "Client ID is required.",
       "string.length": "Must be a valid ObjectId.",
       "string.hex": "Must be a valid hexadecimal ObjectId.",
     }),
-    activityEngaged: joi
-      .array()
-      .items(
-        joi.string().trim().min(1).max(100).messages({
-          "string.base": "Each activity must be a text value.",
-          "string.empty": "Activity keyword cannot be empty.",
-          "string.min": "Activity keyword must contain at least 1 character.",
-          "string.max": "Activity keyword must not exceed 100 characters.",
-        })
-      )
-      .optional()
-      .messages({
-        "array.base": "Activity Engaged must be an array of strings.",
-      }),
-    supportsObserved: joi
-      .array()
-      .items(
-        joi.string().trim().min(1).max(100).messages({
-          "string.base": "Each Support must be a text value.",
-          "string.empty": "Support keyword cannot be empty.",
-          "string.min": "Support keyword must contain at least 1 character.",
-          "string.max": "Support keyword must not exceed 100 characters.",
-        })
-      )
-      .optional()
-      .messages({
-        "array.base": "Activity Engaged must be an array of strings.",
-      }),
+  activityEngaged: joi
+  .array()
+  .items(
+    joi.string().trim().min(1).max(100).messages({
+      "string.base": "Each activity must be a text value.",
+      "string.empty": "Activity keyword cannot be empty.",
+      "string.min": "Activity keyword must contain at least 1 character.",
+      "string.max": "Activity keyword must not exceed 100 characters.",
+    })
+  )
+  .optional()
+  .messages({
+    "array.base": "Activity Engaged must be an array of strings.",
+  }),
+
+   supportsObserved: joi
+  .array()
+  .items(
+    joi.string().trim().min(1).max(100).messages({
+      "string.base": "Each Support must be a text value.",
+      "string.empty": "Support keyword cannot be empty.",
+      "string.min": "Support keyword must contain at least 1 character.",
+      "string.max": "Support keyword must not exceed 100 characters.",
+    })
+  )
+  .optional()
+  .messages({
+    "array.base": "Supports Observed must be an array of strings.",
+  }),
 
     goals_dataCollection: joi
       .array()
@@ -115,32 +116,69 @@ const collectSessionDataSchema = {
             "number.min": "Accuracy cannot be less than 0.",
             "number.max": "Accuracy cannot exceed 100.",
           }),
+          total: joi.number().min(1).required().messages({
+            "number.base": "Total must be a number.",
+            "number.min": "Total cannot be less than 0.",
+          }),
 
           supportLevel: joi
-            .array()
-            .items(
-              joi
+            .object({
+              independent: joi
                 .object({
-                  independent: joi.number().min(0).optional().messages({
-                    "number.base": "Independent support must be a number.",
-                    "number.min": "Independent support cannot be negative.",
+                  count: joi.number().min(0).required().messages({
+                    "number.base": "Independent count must be a number.",
+                    "number.min": "Independent count cannot be negative.",
                   }),
-
-                  minimal: joi.number().min(0).optional().messages({
-                    "number.base": "Minimal support must be a number.",
-                    "number.min": "Minimal support cannot be negative.",
+                  success: joi.number().min(0).required().messages({
+                    "number.base": "Independent success must be a number.",
+                    "number.min": "Independent success cannot be negative.",
                   }),
-
-                  modrate: joi.number().min(0).optional().messages({
-                    "number.base": "Moderate support must be a number.",
-                    "number.min": "Moderate support cannot be negative.",
+                  miss: joi.number().min(0).required().messages({
+                    "number.base": "Independent missed must be a number.",
+                    "number.min": "Independent missed cannot be negative.",
                   }),
                 })
-                .min(1)
-            )
+                .optional(),
+
+              minimal: joi
+                .object({
+                  count: joi.number().min(0).required().messages({
+                    "number.base": "Minimal count must be a number.",
+                    "number.min": "Minimal count cannot be negative.",
+                  }),
+                  success: joi.number().min(0).required().messages({
+                    "number.base": "Minimal success must be a number.",
+                    "number.min": "Minimal success cannot be negative.",
+                  }),
+                  miss: joi.number().min(0).required().messages({
+                    "number.base": "Minimal missed must be a number.",
+                    "number.min": "Minimal missed cannot be negative.",
+                  }),
+                })
+                .optional(),
+
+              modrate: joi // ⚠️ matches Mongo schema
+                .object({
+                  count: joi.number().min(0).required().messages({
+                    "number.base": "Moderate count must be a number.",
+                    "number.min": "Moderate count cannot be negative.",
+                  }),
+                  success: joi.number().min(0).required().messages({
+                    "number.base": "Moderate success must be a number.",
+                    "number.min": "Moderate success cannot be negative.",
+                  }),
+                  miss: joi.number().min(0).required().messages({
+                    "number.base": "Moderate missed must be a number.",
+                    "number.min": "Moderate missed cannot be negative.",
+                  }),
+                })
+                .optional(),
+            })
+            .min(1) // ✅ at least one support level object must exist
             .optional()
             .messages({
-              "array.base": "Support level must be an array.",
+              "object.base": "Support level must be an object.",
+              "object.min": "At least one support level must be provided.",
             }),
 
           counter: joi.number().min(0).optional().messages({
@@ -155,7 +193,7 @@ const collectSessionDataSchema = {
         })
       )
       .min(1)
-      .required()
+      // .required()
       .messages({
         "any.required": "Goals data collection is required.",
         "array.min": "At least one goal data entry is required.",
@@ -188,13 +226,52 @@ const saveSignatureToReportSchema = {
       "string.length": "Must be a valid ObjectId.",
       "string.hex": "Must be a valid hexadecimal ObjectId.",
     }),
-    signature: joi.string().required().messages({})
+    signature: joi.string().required().messages({}),
   }),
 };
+const abandonSessionschema = {
+  query: joi.object({
+    sessionId: joi.string().required().hex().length(24).messages({
+      "any.required": "Session ID is required.",
+      "string.length": "Must be a valid ObjectId.",
+      "string.hex": "Must be a valid hexadecimal ObjectId.",
+    }),
+  }),
+};
+
+
+ const addActivitySchema = joi.object({
+  activity: joi.string()
+    .trim()
+    .min(2)
+    .required()
+    .messages({
+      "string.base": "Activity must be a string",
+      "string.empty": "Activity cannot be empty",
+      "string.min": "Activity must be at least 2 characters long",
+      "any.required": "Activity is required",
+    }),
+});
+
+ const addSupportSchema = joi.object({
+  support: joi.string()
+    .trim()
+    .min(2)
+    .required()
+    .messages({
+      "string.base": "Activity must be a string",
+      "string.empty": "Activity cannot be empty",
+      "string.min": "Activity must be at least 2 characters long",
+      "any.required": "Activity is required",
+    }),
+});
 export const sessionSchema = {
   startSessionSchema,
   collectSessionDataSchema,
   viewClientSessionsSchema,
   buildAIRequestSchema,
-  saveSignatureToReportSchema
+  saveSignatureToReportSchema,
+  abandonSessionschema,
+  addActivitySchema,
+addSupportSchema
 };
