@@ -2,17 +2,27 @@ import { NextFunction, Request, Response } from "express";
 import ErrorHandler from "../utils/ErrorHandler.js";
 import Provider from "../models/provider.model.js";
 import {
+  GoalBankStatus,
+  GoalStatus,
+  SessionStatus,
+  SupportLevel,
   SystemRoles,
   User_Status,
   VerficationType,
 } from "../utils/enums/enums.js";
 import bcrypt from "bcrypt";
 import {
+  calculateTrend,
   defaultAdminPermissions,
   defaultUserPermissions,
+  determineGoalStatus,
+  formatSessionDate,
   generateOtp,
   generateRandomString,
+  getGoalColor,
+  hasClientVariables,
   sendMail,
+  sortFEDCObservations,
 } from "../utils/helper.js";
 import {
   sendOtpToEmail,
@@ -24,6 +34,12 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import Client from "../models/client.model.js";
 import GoalBank from "../models/goalbank.model.js";
 import mongoose, { Types } from "mongoose";
+import {
+  FEDCObservation,
+  GoalProgressData,
+  SupportLevelData,
+} from "../types/types.js";
+import DataCollection from "../models/sessionData.model.js";
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -180,6 +196,34 @@ const getClientProfie = async (
     if (!client) {
       return next(new ErrorHandler("Client not found", 400));
     }
+    const today = new Date();
+    let hasUpdates = false;
+
+    // 🔥 DISCONTINUE LOGIC
+    client.itpGoals.forEach((g) => {
+      if (
+        g.goalStatus === GoalStatus.InProgress &&
+        g.targetDate &&
+        new Date(g.targetDate) <= today
+      ) {
+        g.goalStatus = GoalStatus.Discontinued;
+        g.date = today; // archived date
+        hasUpdates = true;
+      }
+    });
+
+    // Save only if something changed
+    if (hasUpdates) {
+      await client.save();
+    }
+
+    if (client) {
+      const filteredGoals = client.itpGoals.filter(
+        (g) => g.goalStatus === GoalStatus.InProgress
+      );
+
+      client.itpGoals.splice(0, client.itpGoals.length, ...filteredGoals);
+    }
     return res.status(200).json({
       success: true,
       message: "Client found successfully",
@@ -267,6 +311,7 @@ const updateClient = async (
     }
 
     const client: any = await Client.findById(clientId);
+    console.log("client...", client);
     if (!client) {
       return next(new ErrorHandler("Client not found", 404));
     }
@@ -325,7 +370,10 @@ const updateClient = async (
     });
 
     // ✅ SAVE if any changes
+    // console.log("3333.....", client);
     if (clientUpdated || providerUpdated || clientProfileUpdated) {
+      // console.log("33555.....", client);
+
       await client.save();
     }
 
@@ -674,10 +722,11 @@ const viewGoalBank = async (
 ) => {
   try {
     const { user } = req;
-    const goals = await GoalBank.find({ organizationId: user?.organizationId });
-    if (!goals.length) {
-      return next(new ErrorHandler("Goals not found", 400));
-    }
+    const goals = await GoalBank.find({
+      organizationId: user?.organizationId,
+      status: GoalBankStatus.Active,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Here  is  your organizations Goals",
@@ -742,6 +791,23 @@ const editGoalBank = async (
       message: "Goal Bank entry updated successfully.",
       data: updatedGoal,
     });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler());
+  }
+};
+
+const deleteGoal = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { user } = req;
+    const { goalId } = req.query;
+    const goal = await GoalBank.findOneAndUpdate(
+      { _id: goalId, organizationId: user?.organizationId },
+      { $set: { status: GoalBankStatus.Deleted } }
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: "Gaol deleted successfully." });
   } catch (error) {
     console.log("error__", error);
     next(new ErrorHandler());
@@ -834,8 +900,6 @@ const logOut = async (req: Request, res: Response, next: NextFunction) => {
     user.jti = null;
 
     await user.save();
-
-    await user.save();
     return res
       .status(200)
       .json({ success: true, message: "Logout successfully." });
@@ -874,6 +938,539 @@ const getAssignedClients = async (
     next(new ErrorHandler());
   }
 };
+
+const getArchivedGoals = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { clientId } = req.query;
+
+    const client = await Client.findOne({
+      _id: clientId,
+      organizationId: user?.organizationId,
+    }).populate("itpGoals.goal");
+
+    const archivedGoals = client.itpGoals.filter((g) =>
+      [GoalStatus.Mastered, GoalStatus.Discontinued].includes(g.goalStatus)
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Archived Goals found scuccessfully",
+      data: archivedGoals,
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler());
+  }
+};
+
+const progressReport = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { clientId } = req.query;
+
+    // Fetch client details with populated goals
+    const client = await Client.findById(clientId)
+      .populate({
+        path: "itpGoals.goal",
+        model: "GoalBank",
+        select: "category discription criteriaForMastry masteryBaseline",
+      })
+      .lean();
+
+    // console.log("::::::::Client", client, "::::::::Client");
+
+    if (!client) {
+      return next(new ErrorHandler("Client not found", 404));
+    }
+
+    // Calculate date range - last 30 days
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+
+    // Fetch all session data collections for this client in the last 30 days
+    const sessionDataCollections = await DataCollection.find({
+      clientId: clientId,
+      createdAt: { $gte: startDate, $lte: endDate },
+      organizationId: user?.organizationId,
+    })
+      .populate({
+        path: "sessionId",
+        model: "Session",
+        select: "dateOfSession startTime endTime sessionType status",
+      })
+      .populate({
+        path: "goals_dataCollection.goalId",
+        model: "GoalBank",
+        select: "category discription criteriaForMastry",
+      })
+      .sort({ createdAt: 1 })
+      .lean();
+    // console.log("::::::::Client", sessionDataCollections, "::::::::Client");
+    // Process goals progress data
+    const goalsProgressData: GoalProgressData[] = [];
+    const fedcObservationMap = new Map<string, number>();
+
+    // Group session data by goal
+    const goalSessionMap = new Map<
+      string,
+      Array<{
+        date: Date;
+        accuracy: number;
+        supportLevel: SupportLevelData;
+        total: number;
+        clientVariables?: string;
+      }>
+    >();
+
+    sessionDataCollections.forEach((sessionData: any) => {
+      const sessionDate =
+        sessionData.sessionId?.dateOfSession || sessionData.createdAt;
+      const clientVariables = sessionData.providerObservation || "";
+
+      sessionData.goals_dataCollection.forEach((goalData: any) => {
+        const goalId = goalData.goalId._id.toString();
+
+        if (!goalSessionMap.has(goalId)) {
+          goalSessionMap.set(goalId, []);
+        }
+
+        goalSessionMap.get(goalId)!.push({
+          date: new Date(sessionDate),
+          accuracy: goalData.accuracy || 0,
+          supportLevel: goalData.supportLevel || {
+            independent: { count: 0, success: 0, miss: 0 },
+            minimal: { count: 0, success: 0, miss: 0 },
+            modrate: { count: 0, success: 0, miss: 0 },
+          },
+          total: goalData.total || 0,
+          clientVariables: clientVariables,
+        });
+
+        // Track FEDC observations
+        const category = goalData.goalId.category;
+        if (category) {
+          fedcObservationMap.set(
+            category,
+            (fedcObservationMap.get(category) || 0) + 1
+          );
+        }
+      });
+    });
+
+    // Build goal progress data for each ITP goal
+    client.itpGoals.forEach((itpGoal: any, index: number) => {
+      const goalId = itpGoal.goal._id.toString();
+      const goalSessions = goalSessionMap.get(goalId) || [];
+
+      // Calculate support level percentages
+      const calculateSupportLevelPercentage = (
+        supportLevel: SupportLevelData,
+        type: "independent" | "minimal" | "modrate"
+      ): number => {
+        const data = supportLevel[type];
+        if (data.count === 0) return 0;
+        return Math.round((data.success / data.count) * 100);
+      };
+
+      // Process session data
+      const sessionData = goalSessions.map((session) => {
+        const independentPercentage = calculateSupportLevelPercentage(
+          session.supportLevel,
+          "independent"
+        );
+        const minimalPercentage = calculateSupportLevelPercentage(
+          session.supportLevel,
+          "minimal"
+        );
+        const moderatePercentage = calculateSupportLevelPercentage(
+          session.supportLevel,
+          "modrate"
+        );
+
+        return {
+          date: formatSessionDate(session.date),
+          fullDate: session.date,
+          accuracy: session.accuracy,
+          independent: independentPercentage,
+          minimal: minimalPercentage,
+          moderate: moderatePercentage,
+          total: session.total,
+          clientVariables: session.clientVariables,
+          hasVariables: hasClientVariables(session.clientVariables || ""),
+        };
+      });
+
+      // Calculate averages
+      const calculateAverage = (key: keyof (typeof sessionData)[0]): number => {
+        if (sessionData.length === 0) return 0;
+        const sum = sessionData.reduce(
+          (acc, session) => acc + (session[key] as number),
+          0
+        );
+        return Math.round(sum / sessionData.length);
+      };
+
+      const averages = {
+        overall: calculateAverage("accuracy"),
+        independent: calculateAverage("independent"),
+        minimal: calculateAverage("minimal"),
+        moderate: calculateAverage("moderate"),
+      };
+
+      // Determine goal colors based on index
+      const color = getGoalColor(index);
+
+      // Determine current status
+      const masteryPercentage =
+        itpGoal.goal.criteriaForMastry?.masteryPercentage || 80;
+      const requiredSessions =
+        itpGoal.goal.criteriaForMastry?.acrossSession ||
+        client.criteria?.sessionCount ||
+        3;
+
+      const currentStatus = determineGoalStatus(
+        averages.overall,
+        masteryPercentage,
+        sessionData.length,
+        requiredSessions,
+        itpGoal.goalStatus
+      );
+
+      // Calculate trend
+      const trend = calculateTrend(sessionData);
+
+      goalsProgressData.push({
+        goalId: goalId,
+        category: itpGoal.goal.category,
+        goal: itpGoal.goal.discription,
+        baseline:
+          itpGoal.baselinePercentage || itpGoal.goal.masteryBaseline || 0,
+        target: masteryPercentage,
+        dataKey: `goal${index + 1}`,
+        color: color,
+        sessionData: sessionData,
+        averages: averages,
+        currentStatus: currentStatus,
+        trend: trend,
+        totalSessions: sessionData.length,
+      });
+    });
+
+    // Build FEDC observation data
+    const totalSessions = sessionDataCollections.length;
+    const fedcObservationData: FEDCObservation[] = sortFEDCObservations(
+      Array.from(fedcObservationMap.entries()).map(([fedc, count]) => ({
+        fedc: fedc,
+        observations: count,
+        percentage:
+          totalSessions > 0 ? Math.round((count / totalSessions) * 100) : 0,
+      }))
+    );
+
+    // Prepare response
+    const progressReport = {
+      clientInfo: {
+        id: client._id,
+        name: client.name,
+        age: client.age,
+        diagnosis: client.diagnosis,
+      },
+      dateRange: {
+        startDate: startDate,
+        endDate: endDate,
+      },
+      totalSessions: totalSessions,
+      goalsProgress: goalsProgressData,
+      fedcObservations: fedcObservationData,
+      summary: {
+        averageOverallPerformance:
+          goalsProgressData.length > 0
+            ? Math.round(
+                goalsProgressData.reduce(
+                  (sum, goal) => sum + goal.averages.overall,
+                  0
+                ) / goalsProgressData.length
+              )
+            : 0,
+        goalsInProgress: goalsProgressData.filter(
+          (g) => g.currentStatus === "In Progress"
+        ).length,
+        goalsMastered: goalsProgressData.filter(
+          (g) => g.currentStatus === "Mastered"
+        ).length,
+        goalsDiscontinued: goalsProgressData.filter(
+          (g) => g.currentStatus === "Discontinued"
+        ).length,
+      },
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: progressReport,
+      message: "Progress report retrieved successfully",
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler("Failed to fetch progress report", 500));
+  }
+};
+
+// const goalProgressReview = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { user } = req;
+//     const { clientId } = req.query;
+//     const reviewData = await DataCollection.find({
+//       clientId,
+//       organizationId: user.organizationId,
+//     }) .populate({
+//         path: "sessionId",
+//         model: "Session",
+//         select: "dateOfSession startTime endTime sessionType status",
+//       })
+//       .populate("clientId")
+//       .populate({
+//         path: "goals_dataCollection.goalId",
+//         model: "GoalBank",
+//         select: "category discription criteriaForMastry",
+//       })
+//   } catch (error) {
+//     console.log("error__", error);
+//     next(new ErrorHandler());
+//   }
+// };
+
+const goalProgressReview = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { clientId } = req.query;
+    const { days = 30 } = req.query; // Default to 30 days
+
+    if (!clientId) {
+      return next(new ErrorHandler("Client ID is required", 400));
+    }
+
+    // Calculate date range (last 30 days by default)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - Number(days));
+
+    // Get client data with ITP goals
+    const client = await Client.findOne({
+      _id: clientId,
+      organizationId: user.organizationId,
+      userStatus: User_Status.Active,
+    }).populate({
+      path: "itpGoals.goal",
+      model: "GoalBank",
+      match: { status: GoalBankStatus.Active },
+      select: "category discription criteriaForMastry",
+    });
+
+    if (!client) {
+      return next(new ErrorHandler("Client not found", 404));
+    }
+
+    // Get all data collection records for this client in the date range
+    const dataCollections = await DataCollection.find({
+      clientId,
+      organizationId: user.organizationId,
+      createdAt: { $gte: startDate, $lte: endDate },
+    })
+      .populate({
+        path: "sessionId",
+        model: "Session",
+        match: { status: { $ne: SessionStatus.Abandon } },
+        select: "dateOfSession startTime endTime sessionType status",
+      })
+      .populate({
+        path: "goals_dataCollection.goalId",
+        model: "GoalBank",
+        select: "category discription criteriaForMastry status",
+      })
+      .lean();
+
+    // Filter out records where session was not populated (deleted sessions)
+    const validDataCollections = dataCollections.filter(
+      (dc) => dc.sessionId !== null
+    );
+
+    // Process goals data
+    const goalsMap = new Map();
+
+    client.itpGoals.forEach((itpGoal: any) => {
+      if (itpGoal.goal) {
+        const goalId = itpGoal.goal._id.toString();
+        goalsMap.set(goalId, {
+          goalId: itpGoal.goal._id,
+          category: itpGoal.goal.category,
+          description: itpGoal.goal.discription,
+          targetDate: itpGoal.targetDate,
+          baselinePercentage: itpGoal.baselinePercentage,
+          goalStatus: itpGoal.goalStatus, // This will be Mastered, Discontinued, or InProgress
+          masteryPercentage:
+            itpGoal.goal.criteriaForMastry?.masteryPercentage || 80,
+          masterySessionCount:
+            itpGoal.goal.criteriaForMastry?.acrossSession || 3,
+          supportLevel:
+            itpGoal.goal.criteriaForMastry?.supportLevel ||
+            SupportLevel.Independent,
+          sessionsData: [],
+          totalSessions: 0,
+          performanceByDate: [],
+        });
+      }
+    });
+
+    // Aggregate performance data for each goal
+    validDataCollections.forEach((dataCollection: any) => {
+      dataCollection.goals_dataCollection.forEach((goalData: any) => {
+        const goalId = goalData.goalId._id.toString();
+
+        if (goalsMap.has(goalId)) {
+          const goal = goalsMap.get(goalId);
+          const masteryLevel = goal.supportLevel.toLowerCase();
+
+          // Get performance at the required support level for mastery
+          let performance = null;
+          if (
+            masteryLevel === SupportLevel.Independent &&
+            goalData.supportLevel?.independent
+          ) {
+            const { success = 0, count = 0 } =
+              goalData.supportLevel.independent;
+            performance = count > 0 ? (success / count) * 100 : 0;
+          } else if (
+            masteryLevel === SupportLevel.Minimal &&
+            goalData.supportLevel?.minimal
+          ) {
+            const { success = 0, count = 0 } = goalData.supportLevel.minimal;
+            performance = count > 0 ? (success / count) * 100 : 0;
+          } else if (
+            masteryLevel === SupportLevel.Moderate &&
+            goalData.supportLevel?.modrate
+          ) {
+            const { success = 0, count = 0 } = goalData.supportLevel.modrate;
+            performance = count > 0 ? (success / count) * 100 : 0;
+          }
+
+          if (performance !== null) {
+            goal.sessionsData.push({
+              sessionDate: (dataCollection.sessionId as any)?.dateOfSession,
+              performance: Math.round(performance),
+              accuracy: goalData.accuracy,
+            });
+            goal.uniqueSessionIds = goal.uniqueSessionIds || new Set();
+            goal.uniqueSessionIds.add(dataCollection.sessionId._id.toString());
+            goal.performanceByDate.push({
+              date: (dataCollection.sessionId as any)?.dateOfSession,
+              percentage: Math.round(performance),
+            });
+          }
+        }
+      });
+    });
+
+    // Calculate statistics for each goal
+    const goalsReview = Array.from(goalsMap.values()).map((goal) => {
+      // Calculate average performance
+      const performances = goal.sessionsData.map((s) => s.performance);
+      const avgPercentage =
+        performances.length > 0
+          ? Math.round(
+              performances.reduce((a, b) => a + b, 0) / performances.length
+            )
+          : 0;
+
+      // Calculate trend (compare first half vs second half)
+      let trend = "stable";
+      if (performances.length >= 4) {
+        const midPoint = Math.floor(performances.length / 2);
+        const firstHalf = performances.slice(0, midPoint);
+        const secondHalf = performances.slice(midPoint);
+
+        const firstAvg =
+          firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+        const secondAvg =
+          secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+
+        if (secondAvg > firstAvg + 5) trend = "up";
+        else if (secondAvg < firstAvg - 5) trend = "down";
+      }
+
+      return {
+        id: goal.goalId,
+        category: goal.category,
+        goal: goal.description,
+        avgPercentage,
+        trend,
+        sessionsTracked: goal.uniqueSessionIds ? goal.uniqueSessionIds.size : 0,
+        goalStatus: goal.goalStatus, // Mastered, Discontinued, or InProgress
+        masteryPercentage: goal.masteryPercentage.toString(),
+        masterySessionCount: goal.masterySessionCount.toString(),
+        supportLevel: goal.supportLevel.toLowerCase(),
+        targetDate: goal.targetDate,
+        baselinePercentage: goal.baselinePercentage,
+        performanceHistory: goal.performanceByDate.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        ),
+      };
+    });
+
+    // Sort goals by category
+    goalsReview.sort((a, b) => a.category.localeCompare(b.category));
+
+    return res.status(200).json({
+      success: true,
+      message: "Goal Review Progress report found successfully. ",
+      data: {
+        client: {
+          id: client._id,
+          name: client.name,
+          age: client.age,
+        },
+        dateRange: {
+          start: startDate,
+          end: endDate,
+          days: Number(days),
+        },
+        goals: goalsReview,
+        summary: {
+          totalGoals: goalsReview.length,
+          mastered: goalsReview.filter(
+            (g) => g.goalStatus === GoalStatus.Mastered
+          ).length,
+          inProgress: goalsReview.filter(
+            (g) => g.goalStatus === GoalStatus.InProgress
+          ).length,
+          discontinued: goalsReview.filter(
+            (g) => g.goalStatus === GoalStatus.Discontinued
+          ).length,
+        },
+      },
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler("Failed to fetch goal progress review", 500));
+  }
+};
+
 export const providerController = {
   addProvider,
   updateProvider,
@@ -890,10 +1487,14 @@ export const providerController = {
   addGoalBank,
   viewGoalBank,
   editGoalBank,
+  deleteGoal,
   getClientProfie,
   addItpGoalsToClient,
   logOut,
   updateProviderPermissions,
   getAssignedClients,
   updateClientItpGoal,
+  getArchivedGoals,
+  goalProgressReview,
+  progressReport,
 };

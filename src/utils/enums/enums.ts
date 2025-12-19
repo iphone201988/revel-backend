@@ -73,8 +73,8 @@ export const GoalBankCategory =  {
 
 export const SupportLevel={
    Independent: "Independent",
-   Minimal: "Minimal Support",
-   Moderate:"Moderate Support"
+   Minimal: "Minimal",
+   Moderate:"Moderate"
 
 }
 
@@ -136,7 +136,7 @@ export enum AuditResource {
   PROVIDER = "Provider",
   CLIENT = "Client",
   GOAL = "Goal",
-  AUDIT = "Audit Logs",
+  AUDIT = "Audit_Logs",
   SESSION = "Session",
 }
 
@@ -185,3 +185,34 @@ export const activityOptions = [
   'Community Activities',
   'Social Groups/Outings',
 ];
+
+
+export enum  GoalStatus   {
+  Mastered = "Mastered",
+  Discontinued = "Discontinued",
+  InProgress = "InProgress",
+}
+export enum GoalBankStatus {
+  Active = "Active",
+  Deleted ="Deleted"
+}
+
+export enum TicketSupportCategory {
+  ACCOUNT = "account",
+  DATA_COLLECTION = "data-collection",
+  GOALS = "goals",
+  NOTES = "notes",
+  REPORTS = "reports",
+  PERMISSIONS = "permissions",
+  BILLING = "billing",
+  TECHNICAL = "technical",
+  FEATURE = "feature",
+  OTHER = "other",
+}
+export enum SupportPriority {
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  URGENT = "urgent",
+}
+

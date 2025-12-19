@@ -16,7 +16,7 @@ const sessionDataModel = new mongoose.Schema(
         },
         accuracy: {
           type: Number,
-          //   enum: [SessionGoal.Missed, SessionGoal.Successfull],
+    
         },
         total: {
           type: Number,

@@ -8,6 +8,7 @@ import { connectDb } from './src/utils/helper.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as useragent from "express-useragent";
+// import { listFiles } from './src/credentials/googleCloud.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -24,6 +25,8 @@ app.use(express.static(path.join(__dirname, 'public')));
   res.sendFile(path.join(__dirname,"../public",'createAccount.html'))
  
 })
+
+// listFiles().catch(console.error);
 
 app.use('/api', router);
 app.use(errorMiddleware);

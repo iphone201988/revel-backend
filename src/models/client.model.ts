@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { User_Status } from "../utils/enums/enums.js";
+import { GoalStatus, User_Status } from "../utils/enums/enums.js";
 
 const clientModel = new mongoose.Schema({
   name: {
@@ -61,6 +61,17 @@ const clientModel = new mongoose.Schema({
       baselinePercentage: {
         type: Number,
       },
+      goalStatus:{
+        type:String,
+        enum:[GoalStatus.Discontinued,GoalStatus.Mastered, GoalStatus.InProgress],
+        default:GoalStatus.InProgress
+      },
+      successRate:{
+        type:Number
+      },
+      date:{
+        type:Date
+      }
     },
   ],
   criteria: {

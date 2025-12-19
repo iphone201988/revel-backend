@@ -12,6 +12,7 @@ const router = express.Router();
 router.post(
   "/login",
   validate(providerSchema.loginSchema),
+  auditLogs,
   providerController.login,
   auditLogs
 );
@@ -126,6 +127,13 @@ router.put(
   auditLogs,
   providerController.editGoalBank
 );
+router.delete(
+  '/deleteGoal',
+  auth,
+  authorization(Permission.EditGoalBank),
+  validate(providerSchema.deleteGoalSchema),
+  providerController.deleteGoal
+)
 router.get(
   "/clientProfile",
   auth,
@@ -153,6 +161,26 @@ router.put('/update-itp',
    authorization(Permission.AddEditClients),
   validate(providerSchema.updateClientItpGoalSchema),
   auditLogs,
-  providerController.updateClientItpGoal )
+  providerController.updateClientItpGoal
+ )
+
+ router.get('/archived',
+  auth,
+  validate(providerSchema.getArchivedGoalSchema),
+  providerController.getArchivedGoals
+ )
+
+ router.get('/progressReport', 
+  auth,
+  authorization(Permission.ViewProgressReports),
+  validate(providerSchema.getArchivedGoalSchema),
+  providerController.progressReport
+ )
+router.get('/goalProgress',
+  auth,
+  validate(providerSchema.getArchivedGoalSchema),
+  providerController.progressReport
+ )
+ 
 
 export default router;

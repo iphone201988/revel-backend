@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { GoalBankCategory, SupportLevel } from "../utils/enums/enums.js";
+import { GoalBankCategory, GoalBankStatus, SupportLevel } from "../utils/enums/enums.js";
 const goalBankModel = new mongoose.Schema(
   {
     category: {
@@ -44,6 +44,11 @@ const goalBankModel = new mongoose.Schema(
     },
     masteryBaseline:{
       type:Number
+    },
+    status:{
+      type:String,
+      enum:[GoalBankStatus.Active,GoalBankStatus.Deleted ],
+      default: GoalBankStatus.Active
     }
   },
   {
@@ -51,5 +56,5 @@ const goalBankModel = new mongoose.Schema(
   }
 );
 
-const GoalBank = mongoose.model("GoalBank", goalBankModel);
+const   GoalBank = mongoose.model("GoalBank", goalBankModel);
 export default GoalBank;

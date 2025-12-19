@@ -9,6 +9,7 @@ import Report from "../models/notes.model.js";
 import { SessionStatus } from "../utils/enums/enums.js";
 import { Activities } from "../models/activity.model.js";
 import { Supports } from "../models/supports.model.js";
+import { checkAndUpdateGoalMastery } from "../utils/helper.js";
 
 const addActivity = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -98,13 +99,13 @@ const getActivities = async (
       { activities: 1, _id: 0 }
     );
 
-    if (!activities) {
-      return res.status(404).json({
-        message: "Activities record not found for this organization",
-      });
-    }
+    // if (!activities) {
+    //   return res.status(404).json({
+    //     message: "Activities record not found for this organization",
+    //   });
+    // }
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Activities fetched successfully",
       data: activities.activities,
     });
@@ -114,23 +115,15 @@ const getActivities = async (
   }
 };
 
-
-
- const getSupports = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+const getSupports = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { user } = req
+    const { user } = req;
 
     if (!user.organizationId) {
       return res.status(400).json({
         message: "organizationId is required",
       });
     }
-
-   
 
     const supports = await Supports.findOne(
       { organizationId: user?.organizationId },
@@ -218,7 +211,11 @@ const collectSessionData = async (
       supportsObserved,
       activityEngaged,
       providerObservation,
+      
     });
+    for (const goal of goals_dataCollection) {
+  await checkAndUpdateGoalMastery(clientId, goal.goalId);
+}
 
     const sessionData = await Session.findById(sessionId)
       .populate("provider")
@@ -228,6 +225,8 @@ const collectSessionData = async (
       message: "Data Collected successfully..",
       data: { collectedData, sessionData },
     });
+    
+
   } catch (error) {
     console.log("error__", error);
     next(new ErrorHandler());
@@ -419,7 +418,7 @@ const buildAIRequest = async (
       .populate("goals_dataCollection.goalId") // This populates the full GoalBank document
       .lean();
 
-    console.log(dataCollection, "data collection");
+    // console.log(dataCollection, "data collection");
 
     const client = await Client.findById(session.client).lean();
 
@@ -514,13 +513,34 @@ const saveSignatureToReport = async (
       $set: { signature: signature },
     });
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Signature added to the report",
-        data: updatedReport,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Signature added to the report",
+      data: updatedReport,
+    });
+  } catch (error) {
+    console.log("error__", error);
+    next(new ErrorHandler());
+  }
+};
+
+const createReportManually = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {
+      sessionId,
+      sessionOverview,
+
+      plan,
+      fedcObservation,
+      interactionsAndAffect,
+      goalProgress,
+      signature,
+    } = req.body;
+    // presentationAndEngagement,
   } catch (error) {
     console.log("error__", error);
     next(new ErrorHandler());
@@ -550,6 +570,8 @@ const abandonSession = async (
     next(new ErrorHandler());
   }
 };
+
+
 export const sessionController = {
   startSession,
   collectSessionData,
@@ -561,5 +583,5 @@ export const sessionController = {
   addActivity,
   addSupport,
   getActivities,
-getSupports
+  getSupports,
 };

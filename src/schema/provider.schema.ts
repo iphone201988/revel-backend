@@ -528,6 +528,12 @@ const editGoalBankSchema = {
       "string.empty": "Description cannot be empty.",
       "string.min": "Description must be at least 2 characters long.",
     }),
+      masteryBaseline: joi.number().min(0).max(100).required().messages({
+      "number.base": "Mastery Baseline must be a number.",
+      "number.min": "Mastery Baseline must be at least 1.",
+      "number.max": "Mastery Baseline cannot exceed 100.",
+      "any.required": "Mastery Baseline is required.",
+    }),
 
     criteriaForMastry: joi
       .object({
@@ -675,6 +681,32 @@ const updatePermissionsSchema = {
       }),
   }),
 };
+const getArchivedGoalSchema = {
+  query: joi.object({
+    clientId: joi.string().required().length(24).hex().messages({
+      "string.base": "Client Id must be a string.",
+      "string.hex":
+        "Client Id must contain only valid hexadecimal characters.",
+      "string.length":
+        "Client Id must be exactly 24 characters long (MongoDB ObjectId).",
+      "any.required": "Client Id is required.",
+      "string.empty": "Client Id cannot be empty",
+    }),
+  }),
+};
+const deleteGoalSchema = {
+  query: joi.object({
+    goalId: joi.string().required().length(24).hex().messages({
+      "string.base": "Goal Id must be a string.",
+      "string.hex":
+        "Goal Id must contain only valid hexadecimal characters.",
+      "string.length":
+        "Goal Id must be exactly 24 characters long (MongoDB ObjectId).",
+      "any.required": "Goal Id is required.",
+      "string.empty": "Goal Id cannot be empty",
+    }),
+  }),
+};
 
 export const providerSchema = {
   loginSchema,
@@ -691,5 +723,7 @@ export const providerSchema = {
   addItpGoalsToClientSchema,
   updatePermissionsSchema,
   updateClientItpGoalSchema,
+  getArchivedGoalSchema,
   viewPermissionSchema,
+  deleteGoalSchema
 };
