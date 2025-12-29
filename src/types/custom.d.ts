@@ -7,6 +7,7 @@ declare global {
       userId: any;
       jti:any
       useragent?: any;
+      file?:any
     }
   }
 }

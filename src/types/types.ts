@@ -1,4 +1,3 @@
-
 export interface SupportLevelData {
   independent: {
     count: number;
@@ -17,10 +16,9 @@ export interface SupportLevelData {
   };
 }
 
-
- export   interface GoalProgressData {
-    trend:any
-    totalSessions: number
+export interface GoalProgressData {
+  trend: any;
+  totalSessions: number;
   goalId: string;
   category: string;
   goal: string;
@@ -47,7 +45,7 @@ export interface SupportLevelData {
   currentStatus: string;
 }
 
-export  interface FEDCObservation {
+export interface FEDCObservation {
   fedc: string;
   observations: number;
   percentage: number;

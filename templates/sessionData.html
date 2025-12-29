@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>DIR DataFlow – Session Note</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      body {
+        background: #ffffff;
+        margin: 0;
+        padding: 24px;
+        color: #303630;
+        font-size: 13px;
+      }
+
+      .page {
+        border: 2px solid #e5e2db;
+        border-radius: 12px;
+        padding: 20px;
+      }
+
+      .card {
+        border: 1px solid #d6d3cc;
+        border-radius: 10px;
+        padding: 18px;
+        margin-bottom: 18px;
+        page-break-inside: avoid;
+      }
+
+      .title {
+        text-align: center;
+        border-bottom: 1px solid #ccc9c0;
+        padding-bottom: 14px;
+        margin-bottom: 16px;
+      }
+
+      .title h1 {
+        font-size: 22px;
+        margin: 0;
+      }
+
+      .subtitle {
+        margin-top: 6px;
+        font-size: 14px;
+        color: #395159;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 40px;
+      }
+
+      .label {
+        font-size: 11px;
+        color: #395159;
+        margin-bottom: 4px;
+      }
+
+      .value {
+        font-size: 13px;
+        color: #303630;
+      }
+
+      .section-title {
+        font-size: 15px;
+        margin-bottom: 10px;
+      }
+
+      .divider {
+        height: 1px;
+        background: #ccc9c0;
+        margin: 10px 0 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        border: 1px solid #395159;
+        border-radius: 14px;
+        padding: 3px 10px;
+        font-size: 11px;
+        color: #395159;
+      }
+
+      .accuracy {
+        background: #f59e0b;
+        color: #ffffff;
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 14px;
+      }
+
+      .text {
+        font-size: 13px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+      }
+
+      .goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .footer {
+        font-size: 11px;
+        color: #395159;
+        border-top: 1px solid #ccc9c0;
+        padding-top: 12px;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="page">
+
+      <!-- HEADER -->
+      <div class="card">
+        <div class="title">
+          <h1>DIR DataFlow</h1>
+          <div class="subtitle">Session Note</div>
+          <div class="subtitle">Treatment Plan Development and Progress Monitoring</div>
+        </div>
+
+        {{#if client.name}}
+        <div>
+          <div class="label">Person's Name</div>
+          <div class="value">{{client.name}}</div>
+        </div>
+        {{/if}}
+
+        <div class="grid">
+          {{#if client.dob}}
+          <div>
+            <div class="label">Date of Birth</div>
+            <div class="value">{{client.dob}}</div>
+          </div>
+          {{/if}}
+
+          {{#if provider.name}}
+          <div>
+            <div class="label">Provider Name</div>
+            <div class="value">{{provider.name}}</div>
+          </div>
+          {{/if}}
+
+          {{#if provider.credential}}
+          <div>
+            <div class="label">Credential / Title</div>
+            <div class="value">{{provider.credential}}</div>
+          </div>
+          {{/if}}
+
+          {{#if session.dateOfSession}}
+          <div>
+            <div class="label">Date Service Provided</div>
+            <div class="value">{{session.dateOfSession}}</div>
+          </div>
+          {{/if}}
+
+          {{#if session.documentationDate}}
+          <div>
+            <div class="label">Documentation Date</div>
+            <div class="value">{{session.documentationDate}}</div>
+          </div>
+          {{/if}}
+
+          {{#if session.startTime}}
+          <div>
+            <div class="label">Session Start Time</div>
+            <div class="value">{{session.startTime}}</div>
+          </div>
+          {{/if}}
+
+          {{#if session.endTime}}
+          <div>
+            <div class="label">Session End Time</div>
+            <div class="value">{{session.endTime}}</div>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+
+      <!-- SESSION DETAILS -->
+      {{#if session}}
+      <div class="card">
+        <div class="section-title">Session Details</div>
+        <div class="divider"></div>
+
+        {{#if session.durationMinutes}}
+        <div class="label">Total Duration</div>
+        <div class="value">{{session.durationMinutes}} minutes</div>
+        {{/if}}
+
+        {{#if session.attendees}}
+        <div class="label" style="margin-top: 10px">Attendees Present</div>
+        <span class="badge">{{session.attendees}}</span>
+        {{/if}}
+
+        {{#if clinicalNote.clientVariables}}
+        <div class="label" style="margin-top: 14px">Client Variables and Presentation</div>
+        <div class="text">{{clinicalNote.clientVariables}}</div>
+        {{/if}}
+      </div>
+      {{/if}}
+
+      <!-- SUMMARY -->
+      {{#if clinicalNote}}
+      <div class="card">
+        <div class="section-title">Summary of Progress and Response to Treatment</div>
+        <div class="divider"></div>
+
+        {{#if clinicalNote.sessionOverview}}
+        <div class="label">Session Overview</div>
+        <div class="text">{{clinicalNote.sessionOverview}}</div>
+        {{/if}}
+
+        {{#if clinicalNote.providerObservation}}
+        <div class="label" style="margin-top: 12px">Provider Observation</div>
+        <div class="text">{{clinicalNote.providerObservation}}</div>
+        {{/if}}
+
+        {{#if (hasLength fedcObserved)}}
+        <div class="label" style="margin-top: 12px">FEDC Observed During Session</div>
+        <div class="text">{{fedcObserved.length}} FEDC levels observed</div>
+        {{/if}}
+      </div>
+      {{/if}}
+
+      <!-- GOALS -->
+      {{#if (hasLength goals)}}
+        {{#each goals}}
+        <div class="card">
+          <div class="goal-header">
+            <strong>ITP Goal {{inc @index}}</strong>
+            {{#if accuracy}}<span class="accuracy">{{accuracy}}% Accuracy</span>{{/if}}
+          </div>
+
+          <div class="divider"></div>
+
+          {{#if totalTrials}}
+          <div class="label">Performance</div>
+          <div class="value">{{accuracy}}% accuracy across {{totalTrials}} opportunities</div>
+          {{/if}}
+
+          {{#if supportLevel}}
+          <div class="label" style="margin-top: 10px">Support Level Required</div>
+          <span class="badge">{{supportLevel}}</span>
+          {{/if}}
+
+          {{#if success}}
+          <div class="label" style="margin-top: 10px">Opportunities</div>
+          <div class="value">Successful: {{success}} • Missed: {{miss}}</div>
+          {{/if}}
+        </div>
+        {{/each}}
+      {{/if}}
+
+      <!-- TREATMENT -->
+      {{#if clinicalNote.treatmentChanges}}
+      <div class="card">
+        <div class="section-title">Treatment Changes / Diagnosis</div>
+        <div class="divider"></div>
+        <div class="text">{{clinicalNote.treatmentChanges}}</div>
+      </div>
+      {{/if}}
+
+      <!-- PLAN -->
+      {{#if clinicalNote.clinicalRecommendations}}
+      <div class="card">
+        <div class="section-title">Clinical Recommendations / Plan</div>
+        <div class="divider"></div>
+        <div class="text">{{clinicalNote.clinicalRecommendations}}</div>
+      </div>
+      {{/if}}
+
+      <!-- SIGNATURE -->
+      {{#if signature.signedBy}}
+      <div class="card">
+        <div class="section-title">Provider Signature</div>
+        <div class="divider"></div>
+        <div class="text">
+          Signed electronically by {{signature.signedBy}}
+          {{#if signature.signedAt}} on {{signature.signedAt}}{{/if}}
+        </div>
+      </div>
+      {{/if}}
+
+      <div class="footer">
+        <strong>HIPAA Notice:</strong> This document contains protected health information.<br />
+        Generated by DIR DataFlow – Infinity Therapy LLC
+      </div>
+    </div>
+  </body>
+</html>

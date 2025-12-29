@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Session Details</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #ffffff;
+      color: #303630;
+      margin: 0;
+      padding: 24px;
+      font-size: 14px;
+    }
+
+    /* ===== Card ===== */
+    .card {
+      background: #ffffff;
+      border: 1px solid #ccc9c0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #303630;
+    }
+
+    .separator {
+      height: 1px;
+      background: #ccc9c0;
+      margin-bottom: 16px;
+    }
+
+    /* ===== Grid ===== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .col-span-2 {
+      grid-column: span 2;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #395159;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .value {
+      font-size: 14px;
+      font-weight: 500;
+      color: #303630;
+    }
+
+    /* ===== Badge ===== */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #ffffff;
+      background: #22c55e;
+    }
+
+    .badge-outline {
+      background: transparent;
+      border: 1px solid #395159;
+      color: #395159;
+    }
+
+    .badge-blue {
+      border: 1px solid #3b82f6;
+      color: #3b82f6;
+      background: transparent;
+    }
+
+    .badge-green { background: #16a34a; }
+    .badge-yellow { background: #ca8a04; }
+    .badge-orange { background: #ea580c; }
+
+    /* ===== Goal Card ===== */
+    .goal-box {
+      background: #efefef;
+      border: 1px solid #ccc9c0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .goal-title {
+      font-weight: 600;
+    }
+
+    .goal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .mini-card {
+      background: #ffffff;
+      border: 1px solid #ccc9c0;
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .mini-value {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* ===== Support Levels ===== */
+    .support-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .support-item {
+      text-align: center;
+    }
+
+    .support-label {
+      font-size: 12px;
+      color: #395159;
+      margin-bottom: 4px;
+    }
+
+    /* ===== Tags ===== */
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* ===== Observation ===== */
+    .observation {
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SESSION INFORMATION -->
+  <div class="card">
+    <h4>Session Information</h4>
+    <div class="separator"></div>
+
+    <div class="grid">
+      {{#if client.name}}
+      <div class="col-span-2">
+        <span class="label">Client</span>
+        <div class="value">{{client.name}}</div>
+      </div>
+      {{/if}}
+
+      {{#if session.dateOfSession}}
+      <div>
+        <span class="label">Date of Session</span>
+        <div class="value">{{session.dateOfSession}}</div>
+      </div>
+      {{/if}}
+
+      {{#if session.sessionType}}
+      <div>
+        <span class="label">Session Type</span>
+        <div class="value">{{session.sessionType}}</div>
+      </div>
+      {{/if}}
+
+      {{#if session.durationMinutes}}
+      <div>
+        <span class="label">Duration</span>
+        <div class="value">{{session.durationMinutes}} mins</div>
+      </div>
+      {{/if}}
+
+      {{#if session.status}}
+      <div>
+        <span class="label">Status</span>
+        <span class="badge">{{session.status}}</span>
+      </div>
+      {{/if}}
+
+      {{#if session.startTime}}
+      <div>
+        <span class="label">Start Time</span>
+        <div class="value">{{session.startTime}}</div>
+      </div>
+      {{/if}}
+
+      {{#if session.endTime}}
+      <div>
+        <span class="label">End Time</span>
+        <div class="value">{{session.endTime}}</div>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+
+  <!-- GOAL PROGRESS -->
+  {{#if goals.length}}
+  <div class="card">
+    <h4>Goal Progress (Data Collection)</h4>
+    <div class="separator"></div>
+
+    {{#each goals}}
+    <div class="goal-box">
+      <div class="goal-header">
+        <div class="goal-title">Goal {{@index}}</div>
+
+        <span class="badge
+          {{#if (gte accuracy 80)}}badge-green{{else if (gte accuracy 60)}}badge-yellow{{else}}badge-orange{{/if}}">
+          {{accuracy}}% Accuracy
+        </span>
+      </div>
+
+      <div class="goal-grid">
+        <div class="mini-card">
+          <span class="label">Total Trials</span>
+          <div class="mini-value">{{total}}</div>
+        </div>
+
+        <div class="mini-card">
+          <span class="label">Counter</span>
+          <div class="mini-value">{{counter}}</div>
+        </div>
+
+        <div class="mini-card">
+          <span class="label">Accuracy</span>
+          <div class="mini-value">{{accuracy}}%</div>
+        </div>
+      </div>
+
+      <div class="mini-card">
+        <span class="label">Support Levels</span>
+
+        <div class="support-grid">
+          <div class="support-item">
+            <div class="support-label">Independent</div>
+            <strong>{{supportLevel.independent.success}}/{{supportLevel.independent.count}}</strong>
+          </div>
+
+          <div class="support-item">
+            <div class="support-label">Minimal</div>
+            <strong>{{supportLevel.minimal.success}}/{{supportLevel.minimal.count}}</strong>
+          </div>
+
+          <div class="support-item">
+            <div class="support-label">Moderate</div>
+            <strong>{{supportLevel.moderate.success}}/{{supportLevel.moderate.count}}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  <!-- ACTIVITIES -->
+  <div class="card">
+    <h4>Activities Engaged</h4>
+    <div class="separator"></div>
+
+    {{#if activityEngaged.length}}
+    <div class="tags">
+      {{#each activityEngaged}}
+      <span class="badge-outline badge">{{this}}</span>
+      {{/each}}
+    </div>
+    {{else}}
+    <em>No activities recorded</em>
+    {{/if}}
+  </div>
+
+  <!-- SUPPORTS -->
+  <div class="card">
+    <h4>Supports Observed</h4>
+    <div class="separator"></div>
+
+    {{#if supportsObserved.length}}
+    <div class="tags">
+      {{#each supportsObserved}}
+      <span class="badge-blue badge">{{this}}</span>
+      {{/each}}
+    </div>
+    {{else}}
+    <em>No supports recorded</em>
+    {{/if}}
+  </div>
+
+  <!-- OBSERVATIONS -->
+  <div class="card">
+    <h4>Provider Observations</h4>
+    <div class="separator"></div>
+
+    {{#if providerObservation}}
+      <div class="observation">{{providerObservation}}</div>
+    {{else}}
+      <em>No observations recorded</em>
+    {{/if}}
+  </div>
+
+</body>
+</html>

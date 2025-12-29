@@ -58,6 +58,9 @@ console.log(filters, "filters....");
         filters.createdAt.$lte = new Date(endDate as string + "T23:59:59");
       }
     }
+const sevenDaysAgo = new Date();
+sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const exportThisWeek = await AuditLogs.countDocuments({action:"Export" , resource:"Export" , createdAt :  { $gte: sevenDaysAgo }})
 
     const total = await AuditLogs.countDocuments(filters);
 
@@ -73,7 +76,8 @@ console.log(filters, "filters....");
         auditLogs,
         page,
         totalPages: Math.ceil(total / limit),
-        totalRecords: total
+        totalRecords: total,
+        exportThisWeek
       }
     });
 

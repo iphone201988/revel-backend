@@ -24,7 +24,7 @@ const sessionDataModel = new mongoose.Schema(
         supportLevel: {
           independent: {
             count: { type: Number },
-            missed: { type: Number },
+            miss: { type: Number },
             success: { type: Number },
           },
           minimal: {

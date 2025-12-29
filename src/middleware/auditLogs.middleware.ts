@@ -4,6 +4,10 @@ import AuditLogs from "../models/auditLogs.model.js";
 import { auditRouteMap, getClientIp } from "../utils/helper.js";
 
 const auditLogs = async (req: Request, res: Response, next: NextFunction) => {
+
+
+  console.log('');
+  
   res.on("finish", async () => {
     try {
       if (res?.statusCode >= 400) return;

@@ -27,11 +27,15 @@ const supportTicketModel = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Provider",
     },
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+    },
   },
   {
     timestamps: true,
   }
 );
 
-const SubmitTicket = mongoose.model("SubmitTicket" , supportTicketModel)
-export default SubmitTicket
+const SubmitTicket = mongoose.model("SubmitTicket", supportTicketModel);
+export default SubmitTicket;

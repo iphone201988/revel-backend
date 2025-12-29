@@ -1,3 +1,6 @@
 node_modules
 dist
 credentials
+vertex-service-account.json
+secrets/
+

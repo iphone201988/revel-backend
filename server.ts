@@ -8,6 +8,7 @@ import { connectDb } from './src/utils/helper.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as useragent from "express-useragent";
+// import { testAuth, } from './src/aiSetup/genrateNotes.js';
 // import { listFiles } from './src/credentials/googleCloud.js';
 
 const app = express();
@@ -28,6 +29,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // listFiles().catch(console.error);
 
+// testAuth();
 app.use('/api', router);
 app.use(errorMiddleware);
 

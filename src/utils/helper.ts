@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
 import randomstring from "randomstring";
+import puppeteer from "puppeteer";
+import handlebars from "handlebars";
+import { readFile } from "fs/promises";
+import path from "path";
+
 import { GoalStatus, Permission } from "./enums/enums.js";
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -164,6 +169,32 @@ export const auditRouteMap: Record<string, {
     resource: AuditResource.SESSION
   },
 
+  //Export
+  'POST /api/download/fedec' : {
+    action : AuditAction.EXPORT,
+    resource: AuditResource.EXPORT
+  },
+  'POST /api/download/sessionTrends' : {
+    action : AuditAction.EXPORT,
+    resource: AuditResource.EXPORT
+  },
+  'POST /api/download/breakDown' : {
+    action : AuditAction.EXPORT,
+    resource: AuditResource.EXPORT
+  },
+  'POST /api/download/sessionNote' : {
+    action : AuditAction.EXPORT,
+    resource: AuditResource.EXPORT
+  },
+  'POST /api/download/goalReview' : {
+    action : AuditAction.EXPORT,
+    resource: AuditResource.EXPORT
+  },
+  'POST /api/download/audits' : {
+    action : AuditAction.EXPORT,
+    resource: AuditResource.EXPORT
+  },
+ 
 };
 
 import { Request } from "express";
@@ -454,3 +485,99 @@ export const aggregateSupportLevels = (
 
   return aggregated;
 };
+
+
+
+
+export  function buildPieGradient(fedcDistribution: any[]) {
+  let start = 0;
+
+  return fedcDistribution
+    .map(item => {
+      const end = start + item.value;
+      const segment = `${item.color} ${start}% ${end}%`;
+      start = end;
+      return segment;
+    })
+    .join(", ");
+}
+
+export function buildSessionStats(data: any[]) {
+  const totalSessions = data.reduce((s, d) => s + d.sessions, 0);
+  const totalHours = data.reduce((s, d) => s + d.hours, 0);
+
+  const avgSessions = Math.round(totalSessions / data.length);
+  const peak = data.reduce((a, b) => (b.sessions > a.sessions ? b : a));
+
+  return {
+    totalSessions,
+    totalHours: totalHours.toFixed(1),
+    averageSessions: avgSessions,
+    peakMonth: peak.month,
+    peakSessions: peak.sessions
+  };
+}
+
+export function normalizeSessionTrends(data: any[]) {
+  const maxSessions = Math.max(...data.map(d => d.sessions));
+  const maxHours = Math.max(...data.map(d => d.hours));
+
+  return data.map(d => ({
+    ...d,
+    sessions: Math.round((d.sessions / maxSessions) * 100),
+    hours: Math.round((d.hours / maxHours) * 100)
+  }));
+}
+const COLORS = ["#395159", "#5a7a85", "#8ba3ad", "#b7c7cf"];
+
+export function prepareDiagnosisData(data: any[]) {
+  return data.map((item, index) => ({
+    ...item,
+    color: COLORS[index % COLORS.length]
+  }));
+}
+
+
+export function buildDiagnosisStats(data: any[]) {
+  const totalCases = data.reduce((s, d) => s + d.count, 0);
+  const primary = data.reduce((a, b) =>
+    b.count > a.count ? b : a
+  );
+
+  return {
+    totalCases,
+    uniqueDiagnoses: data.length,
+    primaryDiagnosis: primary.diagnosis,
+    primaryPercentage: primary.percentage
+  };
+}
+
+
+
+export function generateAuditCSV(logs) {
+  if (!logs.length) return "";
+
+  const headers = [
+    "Timestamp",
+    "User Name",
+    "User Email",
+    "Action",
+    "Resource",
+    "Status",
+    "IP Address"
+  ];
+
+  const rows = logs.map(log => [
+    log.timestamp,
+    log.userName,
+    log.userEmail,
+    log.action,
+    log.resource,
+    log.status,
+    log.ipAddress
+  ].map(value =>
+    `"${String(value ?? "").replace(/"/g, '""')}"`
+  ).join(","));
+
+  return [headers.join(","), ...rows].join("\n");
+}

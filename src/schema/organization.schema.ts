@@ -1,4 +1,5 @@
  import Joi from "joi";
+import { SupportPriority, TicketSupportCategory } from "../utils/enums/enums.js";
 
  const orgRegisterSchema = {
   body: Joi.object({
@@ -97,6 +98,83 @@
   }),
 };
 
+
+
+
+const dateRange = Joi.string()
+  .pattern(/^\d+$/)
+  .optional()
+  .default("30")
+  .messages({
+    "string.pattern.base": "dateRange must be a number in string format",
+  });
+
+
+ const getReportsOverviewSchema = {
+  query: Joi.object({
+    dateRange,
+  }),
+};
+
+
+ const getClientProgressReportsSchema = {
+  query: Joi.object({
+    dateRange,
+    selectedClient: Joi.string()
+      .optional()
+      .default("all")
+      .messages({
+        "string.base": "selectedClient must be a string",
+      }),
+  }),
+};
+
+
+ const getProviderActivityReportsSchema = {
+  query: Joi.object({
+    dateRange,
+    selectedProvider: Joi.string()
+      .optional()
+      .default("all")
+      .messages({
+        "string.base": "selectedProvider must be a string",
+      }),
+  }),
+};
+ const submitSupportTicketSchema = {
+  body: Joi.object({
+    subject: Joi.string().trim().required().messages({
+      "string.base": "Subject must be a string",
+      "any.required": "Subject is required",
+    }),
+
+    category: Joi.string()
+      .valid(...Object.values(TicketSupportCategory))
+      .required()
+      .messages({
+        "any.only": "Invalid support category",
+        "any.required": "Category is required",
+      }),
+
+    priority: Joi.string()
+      .valid(...Object.values(SupportPriority))
+      .required()
+      .messages({
+        "any.only": "Invalid priority",
+        "any.required": "Priority is required",
+      }),
+
+    discription: Joi.string().trim().required().messages({
+      "any.required": "Description is required",
+    }),
+  }).unknown(true),
+};
+
+
 export const  orgSchema= {
-    orgRegisterSchema
+    orgRegisterSchema,
+    getReportsOverviewSchema,
+getClientProgressReportsSchema,
+getProviderActivityReportsSchema,
+submitSupportTicketSchema
 }

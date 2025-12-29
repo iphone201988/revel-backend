@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Diagnosis Breakdown</title>
+
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 40px;
+      color: #303630;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    /* =======================
+       STATS
+    ======================= */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 20px 0 30px;
+    }
+
+    .stat-box {
+      background: #f6f8f9;
+      padding: 14px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #395159;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      margin-top: 4px;
+      color: #666;
+    }
+
+    /* =======================
+       CONTENT
+    ======================= */
+    .content {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+    }
+
+    /* =======================
+       PIE CHART
+    ======================= */
+    .pie {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: conic-gradient(var(--pie)); 
+    }
+
+    .legend {
+      margin-top: 16px;
+      font-size: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background-color: var(--c);
+}
+
+
+    /* =======================
+       TABLE
+    ======================= */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      min-width: 320px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #f5f5f5;
+      font-weight: bold;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fafafa;
+    }
+
+    /* =======================
+       INSIGHT
+    ======================= */
+    .insight {
+      background: #eef3f5;
+      padding: 14px;
+      border-left: 4px solid #395159;
+      margin-top: 30px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Diagnosis Breakdown</h2>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-box">
+      <div class="stat-value">{{stats.totalCases}}</div>
+      <div class="stat-label">Total Cases</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-value">{{stats.uniqueDiagnoses}}</div>
+      <div class="stat-label">Diagnosis Types</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-value">{{stats.primaryDiagnosis}}</div>
+      <div class="stat-label">Primary Diagnosis</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- PIE CHART -->
+    <div
+      class="pie"
+      style="--pie: {{pieGradient}}"
+    ></div>
+
+    <!-- TABLE -->
+    <table>
+      <thead>
+        <tr>
+          <th>Diagnosis</th>
+          <th>Cases</th>
+          <th>Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each diagnosisBreakdown}}
+          <tr>
+            <td>{{diagnosis}}</td>
+            <td>{{count}}</td>
+            <td>{{percentage}}%</td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+  {{#each diagnosisBreakdown}}
+    <div class="legend-item">
+      <span
+        class="legend-color"
+        style="--c: {{color}}"
+      ></span>
+      {{diagnosis}} ({{percentage}}%)
+    </div>
+  {{/each}}
+</div>
+
+
+  <!-- INSIGHT -->
+  <div class="insight">
+    The most prevalent diagnosis is
+    <strong>{{stats.primaryDiagnosis}}</strong>,
+    accounting for <strong>{{stats.primaryPercentage}}%</strong>
+    of total cases.
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Session Trends</title>
+
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 40px;
+      color: #303630;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    /* =======================
+       STATS
+    ======================= */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 20px 0 30px;
+    }
+
+    .stat-box {
+      background: #f6f8f9;
+      padding: 14px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #395159;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      margin-top: 4px;
+      color: #666;
+    }
+
+    /* =======================
+       INSIGHT
+    ======================= */
+    .insight {
+      background: #eef3f5;
+      padding: 14px;
+      border-left: 4px solid #395159;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    /* =======================
+       CHART LAYOUT
+    ======================= */
+    .chart-wrapper {
+      display: flex;
+      align-items: flex-end;
+      margin-top: 10px;
+    }
+
+    /* Y AXIS */
+    .y-axis {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 240px;
+      margin-right: 12px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* CHART + X AXIS CONTAINER */
+    .chart-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* BAR CHART */
+    .chart {
+      display: flex;
+      align-items: flex-end;
+      height: 240px;
+      border-left: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+      padding: 10px 10px 0 0; /* 🔑 no bottom padding */
+      gap: 18px;
+    }
+
+    .month {
+  width: 50px;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+   .bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 240px;   /* 🔑 SAME AS CHART HEIGHT */
+}
+
+   .bar {
+  width: 18px;
+  min-height: 2px;          /* 🔑 prevents invisible bars */
+  height: calc(var(--h) * 1%);
+  border-radius: 3px 3px 0 0;
+}
+
+    .sessions {
+      background-color: #374f57;
+    }
+
+    .hours {
+      background-color: #9bb2bc;
+    }
+
+    /* X AXIS */
+    .x-axis {
+      display: flex;
+      gap: 18px;
+      margin-top: 6px;
+    }
+
+    .x-label {
+      width: 50px;
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* =======================
+       LEGEND
+    ======================= */
+    .legend {
+      display: flex;
+      gap: 24px;
+      margin-top: 18px;
+      font-size: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-box {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Session Trends</h2>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-box">
+      <div class="stat-value">{{stats.totalSessions}}</div>
+      <div class="stat-label">Total Sessions</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-value">{{stats.averageSessions}}</div>
+      <div class="stat-label">Avg / Month</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-value">{{stats.totalHours}}</div>
+      <div class="stat-label">Total Hours</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-value">{{stats.peakMonth}}</div>
+      <div class="stat-label">Peak Month</div>
+    </div>
+  </div>
+
+  <!-- INSIGHT -->
+  <div class="insight">
+    Sessions peaked in <strong>{{stats.peakMonth}}</strong> with
+    <strong>{{stats.peakSessions}}</strong> sessions, indicating an overall
+    upward trend across the reporting period.
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-wrapper">
+
+    <!-- Y AXIS -->
+    <div class="y-axis">
+      <span>80</span>
+      <span>60</span>
+      <span>40</span>
+      <span>20</span>
+      <span>0</span>
+    </div>
+
+    <!-- CHART + X AXIS -->
+    <div class="chart-container">
+
+      <!-- BAR CHART -->
+      <div class="chart">
+        {{#each sessionTrends}}
+          <div class="month">
+            <div class="bars">
+              <div class="bar sessions" style="--h: {{sessions}}"></div>
+              <div class="bar hours" style="--h: {{hours}}"></div>
+            </div>
+          </div>
+        {{/each}}
+      </div>
+
+      <!-- X AXIS LABELS -->
+      <div class="x-axis">
+        {{#each sessionTrends}}
+          <div class="x-label">{{month}}</div>
+        {{/each}}
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item">
+      <span class="legend-box sessions"></span> Sessions
+    </div>
+    <div class="legend-item">
+      <span class="legend-box hours"></span> Hours
+    </div>
+  </div>
+
+</body>
+</html>

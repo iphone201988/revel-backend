@@ -68,7 +68,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 
     return res.status(200).json({
       success: true,
-      message: "Login successfully. Please verify Otp.",
+      message: "Login successful! Sending 2FA code to your email...",
     });
   } catch (error) {
     console.log(error, "error__");
@@ -346,6 +346,20 @@ const updateClient = async (
       }
       delete updateData.clientProfile;
     }
+    function calculateAge(dob: string | Date) {
+      const birthDate = new Date(dob);
+      const today = new Date();
+
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        age--;
+      }
+
+      return age;
+    }
 
     // 🔹 Allowed client fields
     const allowedFields = [
@@ -357,10 +371,20 @@ const updateClient = async (
       "phone",
       "countryCode",
       "qsp",
+      "age",
       "clinicalSupervisor",
       "reviewDate",
       "criteria",
     ];
+    // ✅ If dob is updated → recalculate age
+    if (updateData.dob) {
+      client.dob = updateData.dob;
+      client.age = calculateAge(updateData.dob);
+      clientUpdated = true;
+
+      // prevent dob being set again in loop
+      delete updateData.dob;
+    }
 
     allowedFields.forEach((field) => {
       if (updateData[field] !== undefined) {
@@ -857,16 +881,17 @@ const addItpGoalsToClient = async (
     }
 
     // 🔹 Prevent duplicate assignment
-    const alreadyAssigned = await Client.findOne({
-      _id: clientId,
-      "itpGoals.goal": finalGoalId,
-    });
+    // const alreadyAssigned = await Client.findOne({
+    //   _id: clientId,
+    //   "itpGoals.goalStatus" : GoalStatus.InProgress,
+    //   "itpGoals.goal": finalGoalId,
+    // });
 
-    if (alreadyAssigned) {
-      return next(
-        new ErrorHandler("Goal already assigned to this client", 400)
-      );
-    }
+    // if (alreadyAssigned) {
+    //   return next(
+    //     new ErrorHandler("Goal already assigned to this client", 400)
+    //   );
+    // }
 
     // 🔹 Assign goal to client
     const client = await Client.findOneAndUpdate(
@@ -1144,7 +1169,7 @@ const progressReport = async (
         requiredSessions,
         itpGoal.goalStatus
       );
-
+    
       // Calculate trend
       const trend = calculateTrend(sessionData);
 
@@ -1202,13 +1227,13 @@ const progressReport = async (
               )
             : 0,
         goalsInProgress: goalsProgressData.filter(
-          (g) => g.currentStatus === "In Progress"
+          (g) => g.currentStatus === GoalStatus.InProgress
         ).length,
         goalsMastered: goalsProgressData.filter(
-          (g) => g.currentStatus === "Mastered"
+          (g) => g.currentStatus === GoalStatus.Mastered
         ).length,
         goalsDiscontinued: goalsProgressData.filter(
-          (g) => g.currentStatus === "Discontinued"
+          (g) => g.currentStatus === GoalStatus.Discontinued
         ).length,
       },
     };
@@ -1223,35 +1248,6 @@ const progressReport = async (
     next(new ErrorHandler("Failed to fetch progress report", 500));
   }
 };
-
-// const goalProgressReview = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//     const { user } = req;
-//     const { clientId } = req.query;
-//     const reviewData = await DataCollection.find({
-//       clientId,
-//       organizationId: user.organizationId,
-//     }) .populate({
-//         path: "sessionId",
-//         model: "Session",
-//         select: "dateOfSession startTime endTime sessionType status",
-//       })
-//       .populate("clientId")
-//       .populate({
-//         path: "goals_dataCollection.goalId",
-//         model: "GoalBank",
-//         select: "category discription criteriaForMastry",
-//       })
-//   } catch (error) {
-//     console.log("error__", error);
-//     next(new ErrorHandler());
-//   }
-// };
-
 const goalProgressReview = async (
   req: Request,
   res: Response,
@@ -1260,7 +1256,7 @@ const goalProgressReview = async (
   try {
     const { user } = req;
     const { clientId } = req.query;
-    const { days = 30 } = req.query; // Default to 30 days
+    const { days = 30 } = req.query;
 
     if (!clientId) {
       return next(new ErrorHandler("Client ID is required", 400));
@@ -1454,13 +1450,13 @@ const goalProgressReview = async (
         summary: {
           totalGoals: goalsReview.length,
           mastered: goalsReview.filter(
-            (g) => g.goalStatus === GoalStatus.Mastered
+            (g) => g?.goalStatus === GoalStatus.Mastered
           ).length,
           inProgress: goalsReview.filter(
-            (g) => g.goalStatus === GoalStatus.InProgress
+            (g) => g?.goalStatus === GoalStatus.InProgress
           ).length,
           discontinued: goalsReview.filter(
-            (g) => g.goalStatus === GoalStatus.Discontinued
+            (g) => g?.goalStatus === GoalStatus.Discontinued
           ).length,
         },
       },

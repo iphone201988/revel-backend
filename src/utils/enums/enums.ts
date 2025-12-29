@@ -129,6 +129,9 @@ export enum AuditAction {
   VIEW_SESSIONS = "View Sessions",
   GENERATE_NOTES = "Generate Notes",
 
+  //Export
+  EXPORT = "Export"
+
 }
 
 export enum AuditResource {
@@ -138,6 +141,7 @@ export enum AuditResource {
   GOAL = "Goal",
   AUDIT = "Audit_Logs",
   SESSION = "Session",
+  EXPORT = 'Export'
 }
 
 export const supportsOptions = [
