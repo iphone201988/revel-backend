@@ -43,6 +43,7 @@ export interface GoalProgressData {
     moderate: number;
   };
   currentStatus: string;
+  requiredSupportLevel:string
 }
 
 export interface FEDCObservation {

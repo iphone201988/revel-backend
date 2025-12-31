@@ -67,12 +67,12 @@ export const defaultAdminPermissions = [
 ];
 
 export const defaultUserPermissions = [
-    Permission.ViewAssignedClients,
-        Permission.ViewSessionData,
-        Permission.EnterSessionData,
-        Permission.CollectFEDCData,
-        Permission.ViewGoalBank,
-        Permission.ScheduleSessions,
+  Permission.ViewAssignedClients,
+  Permission.ViewSessionData,
+  Permission.EnterSessionData,
+  Permission.CollectFEDCData,
+  Permission.ViewGoalBank,
+  Permission.ScheduleSessions,
 ]
 
 
@@ -136,65 +136,65 @@ export const auditRouteMap: Record<string, {
     action: AuditAction.ADD_GOAL_BANK,
     resource: AuditResource.GOAL,
   },
-   "DELETE /api/provider/deleteGoal":{
-     action: AuditAction.EDIT_GOAL_BANK,
-    resource: AuditResource.GOAL,
-   },
-   "EDIT /api/provider/editGoalBank":{
+  "DELETE /api/provider/deleteGoal": {
     action: AuditAction.EDIT_GOAL_BANK,
     resource: AuditResource.GOAL,
-   },
+  },
+  "EDIT /api/provider/editGoalBank": {
+    action: AuditAction.EDIT_GOAL_BANK,
+    resource: AuditResource.GOAL,
+  },
   //LOGS
-  "GET /api/logs/view":{
+  "GET /api/logs/view": {
     action: AuditAction.VIEW_LOGS,
-    resource : AuditResource.AUDIT
+    resource: AuditResource.AUDIT
   },
-  "GET /api/logs/statistics":{
+  "GET /api/logs/statistics": {
     action: AuditAction.VIEw_STATS,
-    resource : AuditResource.AUDIT
+    resource: AuditResource.AUDIT
   },
 
 
-//Session
-  "POST /api/session/start":{
-    action : AuditAction.START_SESSION,
+  //Session
+  "POST /api/session/start": {
+    action: AuditAction.START_SESSION,
     resource: AuditResource.SESSION
   },
-  "GET /api/session/view":{
-      action : AuditAction.VIEW_SESSIONS,
+  "GET /api/session/view": {
+    action: AuditAction.VIEW_SESSIONS,
     resource: AuditResource.SESSION
   },
-  "POST /api/session//notes":{
-      action : AuditAction.GENERATE_NOTES,
+  "POST /api/session//notes": {
+    action: AuditAction.GENERATE_NOTES,
     resource: AuditResource.SESSION
   },
 
   //Export
-  'POST /api/download/fedec' : {
-    action : AuditAction.EXPORT,
+  'POST /api/download/fedec': {
+    action: AuditAction.EXPORT,
     resource: AuditResource.EXPORT
   },
-  'POST /api/download/sessionTrends' : {
-    action : AuditAction.EXPORT,
+  'POST /api/download/sessionTrends': {
+    action: AuditAction.EXPORT,
     resource: AuditResource.EXPORT
   },
-  'POST /api/download/breakDown' : {
-    action : AuditAction.EXPORT,
+  'POST /api/download/breakDown': {
+    action: AuditAction.EXPORT,
     resource: AuditResource.EXPORT
   },
-  'POST /api/download/sessionNote' : {
-    action : AuditAction.EXPORT,
+  'POST /api/download/sessionNote': {
+    action: AuditAction.EXPORT,
     resource: AuditResource.EXPORT
   },
-  'POST /api/download/goalReview' : {
-    action : AuditAction.EXPORT,
+  'POST /api/download/goalReview': {
+    action: AuditAction.EXPORT,
     resource: AuditResource.EXPORT
   },
-  'POST /api/download/audits' : {
-    action : AuditAction.EXPORT,
+  'POST /api/download/audits': {
+    action: AuditAction.EXPORT,
     resource: AuditResource.EXPORT
   },
- 
+
 };
 
 import { Request } from "express";
@@ -214,7 +214,7 @@ export const getClientIp = (req: Request): string => {
   if (typeof forwarded === "string") {
     return forwarded.split(",")[0].trim();
   }
-  
+
   // Case 3 → fallback
   return req.socket.remoteAddress || req.ip || "Unknown";
 };
@@ -227,8 +227,14 @@ export const checkAndUpdateGoalMastery = async (
   const goalBank = await GoalBank.findById(goalId);
   if (!goalBank?.criteriaForMastry) return;
 
-  const { masteryPercentage, acrossSession } =
+  const { masteryPercentage, acrossSession, supportLevel } =
     goalBank.criteriaForMastry;
+
+  // Determine which support level key to look for in usage data
+  // Schema uses: independent, minimal, modrate (typo in schema)
+  let supportKey = "independent";
+  if (supportLevel === "Moderate") supportKey = "modrate";
+  else if (supportLevel === "Minimal") supportKey = "minimal";
 
   // 2. Get last N session records for this goal
   const sessions = await DataCollection.aggregate([
@@ -236,26 +242,42 @@ export const checkAndUpdateGoalMastery = async (
     { $unwind: "$goals_dataCollection" },
     {
       $match: {
-        "goals_dataCollection.goalId":
-          new mongoose.Types.ObjectId(goalId),
+        "goals_dataCollection.goalId": new mongoose.Types.ObjectId(goalId),
       },
     },
     { $sort: { createdAt: -1 } },
-    { $limit: acrossSession },
+    { $limit: acrossSession || 3 }, // Default to 3 if not set
     {
       $project: {
-        accuracy: "$goals_dataCollection.accuracy",
+        // Get the specific support level data
+        data: `$goals_dataCollection.supportLevel.${supportKey}`,
       },
     },
   ]);
 
   // 3. Check session count
-  if (sessions.length < acrossSession) return;
+  // If we don't have enough sessions to check 'acrossSession' criteria, we can't master it yet
+  if (sessions.length < (acrossSession || 3)) return;
 
-  // 4. Calculate average accuracy
+  // 4. Calculate average accuracy for the REQUIRED support level
+  // Each session doc acts as one data point
+  const sessionAccuracies = sessions
+    .map((s) => {
+      const d = s.data;
+      if (!d || !d.count || d.count === 0) return null; // No data for this support level in this session
+      return (d.success / d.count) * 100;
+    })
+    .filter((acc) => acc !== null) as number[];
+
+  // If we filtered out sessions (e.g. goal was attempted but not at this support level), 
+  // do we still count it? Strict mastery usually requires N consecutive sessions meeting criteria.
+  // If a session didn't have data, it breaks the streak or doesn't count. 
+  // For now assuming we need valid data in all N sessions.
+  if (sessionAccuracies.length < (acrossSession || 3)) return;
+
   const avgAccuracy =
-    sessions.reduce((sum, s) => sum + (s.accuracy || 0), 0) /
-    sessions.length;
+    sessionAccuracies.reduce((sum, acc) => sum + acc, 0) /
+    sessionAccuracies.length;
 
   // 5. Mastery check
   if (avgAccuracy >= masteryPercentage) {
@@ -339,8 +361,8 @@ export const determineGoalStatus = (
   requiredSessions: number = 3,
   existingStatus?: string
 ): string => {
-  if (existingStatus === GoalStatus.Discontinued) return  GoalStatus.Discontinued;
-  if (existingStatus === GoalStatus.Mastered) return GoalStatus?.Mastered;
+  if (existingStatus === GoalStatus.Discontinued) return GoalStatus.Discontinued;
+  if (existingStatus === GoalStatus.Mastered) return GoalStatus.Mastered;
 
   if (
     currentPerformance >= targetPercentage &&
@@ -436,7 +458,7 @@ export const validateDateRange = (
  */
 export const hasClientVariables = (observation: string): boolean => {
   if (!observation) return false;
-  
+
   const keywords = [
     "illness",
     "sick",
@@ -489,7 +511,7 @@ export const aggregateSupportLevels = (
 
 
 
-export  function buildPieGradient(fedcDistribution: any[]) {
+export function buildPieGradient(fedcDistribution: any[]) {
   let start = 0;
 
   return fedcDistribution

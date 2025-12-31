@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { generatePdfBuffer } from "../utils/pdf/genratePdf.js";
+import archiver from "archiver";
 import ErrorHandler from "../utils/ErrorHandler.js";
 import {
   buildPieGradient,
@@ -310,10 +311,16 @@ const downloadSessionHistory = async (
       },
 
       session: {
-        dateOfSession: (collectedData?.sessionId as any)?.dateOfSession,
+        dateOfSession: moment(
+          (collectedData?.sessionId as any)?.dateOfSession
+        ).format("DD-MM-YYYY"),
         sessionType: (collectedData?.sessionId as any)?.sessionType,
-        startTime: (collectedData.sessionId as any)?.startTime,
-        endTime: (collectedData.sessionId as any)?.endTime,
+        startTime: moment((collectedData.sessionId as any)?.startTime).format(
+          "hh:mm A"
+        ),
+        endTime: moment((collectedData.sessionId as any)?.endTime).format(
+          "hh:mm A"
+        ),
         status: (collectedData.sessionId as any)?.status,
         durationMinutes: Math.round(collectedData.duration / 60),
       },
@@ -360,6 +367,96 @@ const downloadSessionHistory = async (
   }
 };
 
+const downloadSelectedSessionHistory = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionIds } = req.body;
+
+    if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+      return next(new ErrorHandler("No sessions selected", 400));
+    }
+
+    const sessions = await DataCollection.find({
+      _id: { $in: sessionIds },
+    })
+      .populate("sessionId")
+      .populate("clientId");
+
+    if (!sessions.length) {
+      return next(new ErrorHandler("Sessions not found", 404));
+    }
+
+    // ZIP headers
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": "attachment; filename=session-history.zip",
+    });
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    let count = 1;
+
+    for (const collectedData of sessions) {
+      const pdfData = {
+        client: {
+          name: (collectedData.clientId as any)?.name,
+        },
+        session: {
+          dateOfSession: moment(
+            (collectedData.sessionId as any)?.dateOfSession
+          ).format("DD-MM-YYYY"),
+          sessionType: (collectedData.sessionId as any)?.sessionType,
+          startTime: moment(
+            (collectedData.sessionId as any)?.startTime
+          ).format("hh:mm A"),
+          endTime: moment(
+            (collectedData.sessionId as any)?.endTime
+          ).format("hh:mm A"),
+          status: (collectedData.sessionId as any)?.status,
+          durationMinutes: Math.round(collectedData.duration / 60),
+        },
+        goals: collectedData.goals_dataCollection.map((goal: any) => ({
+          accuracy: goal.accuracy,
+          total: goal.total,
+          counter: goal.counter,
+          supportLevel: {
+            independent: goal.supportLevel?.independent || { success: 0, count: 0 },
+            minimal: goal.supportLevel?.minimal || { success: 0, count: 0 },
+            moderate: goal.supportLevel?.modrate || { success: 0, count: 0 },
+          },
+        })),
+        activityEngaged: collectedData.activityEngaged || [],
+        supportsObserved: collectedData.supportsObserved || [],
+        providerObservation: collectedData.providerObservation || "",
+      };
+
+      const pdfBuffer = await generatePdfBuffer(
+        "sessionHistory.html",
+        pdfData
+      );
+
+      const safeName =
+        pdfData.client.name?.replace(/\s+/g, "_") || "Client";
+
+      const fileName = `Session-${count}-${safeName}-${pdfData.session.dateOfSession}.pdf`;
+
+      archive.append(pdfBuffer, { name: fileName });
+
+      count++;
+    }
+
+    await archive.finalize();
+  } catch (error) {
+    console.error(error);
+    next(new ErrorHandler());
+  }
+};
+
+
 export const pdfController = {
   downloadFedcDistributionPdf,
   downloadSessionTrendsPdf,
@@ -368,4 +465,5 @@ export const pdfController = {
   downloadAuditLogs,
   downloadGoalReviewReport,
   downloadSessionHistory,
+  downloadSelectedSessionHistory,
 };

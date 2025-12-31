@@ -66,6 +66,9 @@ const clientModel = new mongoose.Schema({
         enum:[GoalStatus.Discontinued,GoalStatus.Mastered, GoalStatus.InProgress],
         default:GoalStatus.InProgress
       },
+      reason:{
+        type:String
+      },
       successRate:{
         type:Number
       },

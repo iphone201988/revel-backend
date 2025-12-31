@@ -183,4 +183,10 @@ router.get('/goalProgress',
  )
  
 
+ router.put('/updateStatus', 
+  auth,
+  validate(providerSchema.updateGoalStatusSchema),
+  providerController.updateGoalStatus
+ )
+
 export default router;

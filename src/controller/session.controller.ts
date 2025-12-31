@@ -91,20 +91,19 @@ const getActivities = async (
     const { user } = req;
 
     if (!user?.organizationId) {
-      return res.status(400).json({
-        message: "organizationId is required",
-      });
+      return next(new ErrorHandler("Organization Id is required", 400))
+     
     }
     const activities = await Activities.findOne(
       { organizationId: user?.organizationId },
       { activities: 1, _id: 0 }
     );
 
-    // if (!activities) {
-    //   return res.status(404).json({
-    //     message: "Activities record not found for this organization",
-    //   });
-    // }
+    if (!activities) {
+      return res.status(404).json({
+        message: "Activities record not found for this organization",
+      });
+    }
 
     return res.status(200).json({
       message: "Activities fetched successfully",
@@ -279,7 +278,8 @@ const viewClientSessions = async (
       clientId: clientId,
     })
       .populate("clientId")
-      .populate("sessionId");
+      .populate("sessionId")
+      .sort({createdAt:-1});
     //   .populate({
     //     path: "sessionId",
     //     populate: { path: "provider" },

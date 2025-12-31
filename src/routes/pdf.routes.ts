@@ -61,4 +61,13 @@ router.post(
   pdfController.downloadSessionHistory
 )
 
+router.post(
+  '/selectedSession',
+  auth,
+  authorization(Permission.ExportData),
+  auditLogs,
+  validate(pdfSchema.downloadSelectedSessionsSchema),
+  pdfController.downloadSelectedSessionHistory
+)
+
 export default router;
