@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { GoalStatus, User_Status } from "../utils/enums/enums.js";
+import { GoalStatus, SupportLevel, User_Status } from "../utils/enums/enums.js";
 
 const clientModel = new mongoose.Schema({
   name: {
@@ -74,17 +74,20 @@ const clientModel = new mongoose.Schema({
       },
       date:{
         type:Date
+      }, 
+      masteryPercentage: {
+        type: Number,    
+      },
+      sessionCount: {
+        type: Number,
+      },
+      supportLevel:{
+        type:String,
+        enum:[SupportLevel.Independent, SupportLevel.Minimal,SupportLevel.Moderate]
       }
     },
   ],
-  criteria: {
-    masteryPercentage: {
-      type: Number,
-    },
-    sessionCount: {
-      type: Number,
-    },
-  },
+  
   userStatus:{
     type:String,
     enum:[User_Status.Active, User_Status.Deleted],

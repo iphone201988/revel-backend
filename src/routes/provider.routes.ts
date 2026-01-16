@@ -12,15 +12,15 @@ const router = express.Router();
 router.post(
   "/login",
   validate(providerSchema.loginSchema),
-  auditLogs,
   providerController.login,
-  auditLogs
+ 
 );
 router.get("/profile", auth, auditLogs, providerController.getUserProfile);
 router.put(
   "/verify",
   validate(providerSchema.verifyOtpSchema),
-  providerController.verifyOtp
+  providerController.verifyOtp,
+  
 );
 
 router.put(
@@ -134,6 +134,11 @@ router.delete(
   validate(providerSchema.deleteGoalSchema),
   providerController.deleteGoal
 )
+router.delete('/deleteClient', 
+  auth,
+  validate(providerSchema?.getClientProfileSchema),
+  providerController.deleteClient
+)
 router.get(
   "/clientProfile",
   auth,
@@ -189,4 +194,11 @@ router.get('/goalProgress',
   providerController.updateGoalStatus
  )
 
+ router.post('/sendLink', 
+  auth,
+  authorization(Permission?.ManageProviders),
+  validate(providerSchema.sendPasswordLinkSchema),
+  auditLogs,
+  providerController.sendPasswordLink
+ )
 export default router;

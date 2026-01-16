@@ -8,10 +8,15 @@ import { connectDb } from './src/utils/helper.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as useragent from "express-useragent";
+import webhookRoute from './src/routes/webhooks.routes.js'
+
 // import { testAuth, } from './src/aiSetup/genrateNotes.js';
 // import { listFiles } from './src/credentials/googleCloud.js';
 
 const app = express();
+
+
+app.use("/api/stripe", webhookRoute);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -26,6 +31,9 @@ app.use(express.static(path.join(__dirname, 'public')));
   res.sendFile(path.join(__dirname,"../public",'createAccount.html'))
  
 })
+
+
+
 
 // listFiles().catch(console.error);
 

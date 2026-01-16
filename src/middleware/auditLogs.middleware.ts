@@ -15,7 +15,7 @@ const auditLogs = async (req: Request, res: Response, next: NextFunction) => {
   
 const ipAddress = getClientIp(req);
       const { user } = req;
-      console.log(user, "user");
+      console.log(user, "user Profile----");
 
       const key = `${req.method} ${req.originalUrl}`;
       const auditMeta = auditRouteMap[key];

@@ -60,6 +60,7 @@
         font-size: 11px;
         color: #395159;
         margin-bottom: 4px;
+        font-weight: 600;
       }
 
       .value {
@@ -70,6 +71,7 @@
       .section-title {
         font-size: 15px;
         margin-bottom: 10px;
+        font-weight: 600;
       }
 
       .divider {
@@ -95,6 +97,18 @@
         border-radius: 14px;
       }
 
+      .accuracy.high {
+        background: #16a34a;
+      }
+
+      .accuracy.medium {
+        background: #eab308;
+      }
+
+      .accuracy.low {
+        background: #f59e0b;
+      }
+
       .text {
         font-size: 13px;
         line-height: 1.6;
@@ -105,6 +119,47 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+      }
+
+      .support-level-container {
+        margin-top: 14px;
+      }
+
+      .support-level-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: #f5f5f5;
+        border-radius: 8px;
+        margin-bottom: 8px;
+      }
+
+      .support-level-name {
+        font-size: 12px;
+        color: #303630;
+      }
+
+      .support-level-stats {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .support-level-fraction {
+        font-size: 12px;
+        color: #303630;
+      }
+
+      .support-level-badge {
+        display: inline-block;
+        border: 1px solid #395159;
+        border-radius: 12px;
+        padding: 2px 12px;
+        font-size: 11px;
+        color: #395159;
+        min-width: 50px;
+        text-align: center;
       }
 
       .footer {
@@ -239,24 +294,97 @@
         <div class="card">
           <div class="goal-header">
             <strong>ITP Goal {{inc @index}}</strong>
-            {{#if accuracy}}<span class="accuracy">{{accuracy}}% Accuracy</span>{{/if}}
+            {{#if accuracy}}
+            <span class="accuracy {{#if (gte accuracy 80)}}high{{else}}{{#if (gte accuracy 60)}}medium{{else}}low{{/if}}{{/if}}">
+              {{accuracy}}% Accuracy
+            </span>
+            {{/if}}
           </div>
 
           <div class="divider"></div>
 
-          {{#if totalTrials}}
-          <div class="label">Performance</div>
-          <div class="value">{{accuracy}}% accuracy across {{totalTrials}} opportunities</div>
+          {{#if description}}
+          <div class="label">Goal Description</div>
+          <div class="value" style="margin-bottom: 10px">{{description}}</div>
           {{/if}}
 
-          {{#if supportLevel}}
-          <div class="label" style="margin-top: 10px">Support Level Required</div>
-          <span class="badge">{{supportLevel}}</span>
+          {{#if fedcCategory}}
+          <div class="label">FEDC Category</div>
+          <div class="value" style="margin-bottom: 10px">{{fedcCategory}}</div>
           {{/if}}
+
+          <div class="grid">
+            {{#if totalTrials}}
+            <div>
+              <div class="label">Performance</div>
+              <div class="value">{{accuracy}}% accuracy across {{totalTrials}} opportunities</div>
+            </div>
+            {{/if}}
+
+            {{#if supportLevel}}
+            <div>
+              <div class="label">Support Level Required</div>
+              <span class="badge">{{supportLevel}}</span>
+            </div>
+            {{/if}}
+          </div>
 
           {{#if success}}
           <div class="label" style="margin-top: 10px">Opportunities</div>
           <div class="value">Successful: {{success}} • Missed: {{miss}}</div>
+          {{/if}}
+
+          {{#if supportLevelDetails}}
+          <div class="support-level-container">
+            <div class="label">Performance by Support Level</div>
+            
+            {{#if supportLevelDetails.independent}}
+            <div class="support-level-row">
+              <span class="support-level-name">Independent</span>
+              <div class="support-level-stats">
+                <span class="support-level-fraction">
+                  {{supportLevelDetails.independent.success}}/{{supportLevelDetails.independent.count}}
+                </span>
+                <span class="support-level-badge">
+                  {{supportLevelDetails.independent.percent}}%
+                </span>
+              </div>
+            </div>
+            {{/if}}
+
+            {{#if supportLevelDetails.minimal}}
+            <div class="support-level-row">
+              <span class="support-level-name">Minimal Support</span>
+              <div class="support-level-stats">
+                <span class="support-level-fraction">
+                  {{supportLevelDetails.minimal.success}}/{{supportLevelDetails.minimal.count}}
+                </span>
+                <span class="support-level-badge">
+                  {{supportLevelDetails.minimal.percent}}%
+                </span>
+              </div>
+            </div>
+            {{/if}}
+
+            {{#if supportLevelDetails.moderate}}
+            <div class="support-level-row">
+              <span class="support-level-name">Moderate Support</span>
+              <div class="support-level-stats">
+                <span class="support-level-fraction">
+                  {{supportLevelDetails.moderate.success}}/{{supportLevelDetails.moderate.count}}
+                </span>
+                <span class="support-level-badge">
+                  {{supportLevelDetails.moderate.percent}}%
+                </span>
+              </div>
+            </div>
+            {{/if}}
+          </div>
+          {{/if}}
+
+          {{#if progressSummary}}
+          <div class="label" style="margin-top: 12px">Progress Summary</div>
+          <div class="text">{{progressSummary}}</div>
           {{/if}}
         </div>
         {{/each}}

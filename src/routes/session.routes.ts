@@ -81,4 +81,11 @@ router.post(
 router.get("/activity", auth, sessionController.getActivities);
 router.get("/support", auth, sessionController.getSupports);
 
+router.post(
+  "/saveReport",
+  auth,
+  validate(sessionSchema.createReportSchema),
+  sessionController.createReport
+);
+
 export default router;

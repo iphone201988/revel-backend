@@ -1,6 +1,6 @@
 export const SystemRoles = {
   SuperAdmin: "1",
-  Admin:'2',
+  Admin: "2",
   User: "3",
 };
 
@@ -10,9 +10,9 @@ export const Status = {
 };
 export const ClinicRole = {
   QSP: "QSP",
-  Level1:"Level 1",
-  Level2: "Level 2"
-}
+  Level1: "Level 1",
+  Level2: "Level 2",
+};
 export const User_Status = {
   Active: "active",
   Deleted: "deleted",
@@ -46,6 +46,7 @@ export const Permission = {
   EditMasteryCriteria: "EditMasteryCriteria",
   ViewGoalBank: "ViewGoalBank",
   EditGoalBank: "EditGoalBank",
+  QspSignatureRequired: "QspSignatureRequired",
 
   // Scheduling & Reports
   ScheduleSessions: "ScheduleSessions",
@@ -58,50 +59,51 @@ export const Permission = {
   ManagePermissions: "ManagePermissions",
 };
 
+export const GoalBankCategory = {
+  FEDC_9: "FEDC 9 - Reflective Thinking",
+  FEDC_8: "FEDC 8 - Gray Area Thinking",
+  FEDC_7: "FEDC 7 - Multi-Causal Thinking",
+  FEDC_6: "FEDC 6 - Emotional Thinking",
+  FEDC_5: "FEDC 5 - Emotional Ideas",
+  FEDC_4: "FEDC 4 - Complex Communication",
+  FEDC_3: "FEDC 3 - Two-Way Communication",
+  FEDC_2: "FEDC 2 - Engagement & Relating",
+  FEDC_1: "FEDC 1 - Shared Attention & Regulation",
+};
 
-export const GoalBankCategory =  {
-    FEDC_9: "FEDC 9 - Reflective Thinking",
-    FEDC_8:"FEDC 8 - Gray Area Thinking",
-    FEDC_7:"FEDC 7 - Multi-Causal Thinking",
-    FEDC_6:"FEDC 6 - Emotional Thinking",
-    FEDC_5:"FEDC 5 - Emotional Ideas",
-    FEDC_4:"FEDC 4 - Complex Communication",
-    FEDC_3:"FEDC 3 - Two-Way Communication",
-    FEDC_2:"FEDC 2 - Engagement & Relating",
-    FEDC_1:"FEDC 1 - Shared Attention & Regulation"
-}
-
-export const SupportLevel={
-   Independent: "Independent",
-   Minimal: "Minimal",
-   Moderate:"Moderate"
-
-}
+export const SupportLevel = {
+  Independent: "Independent",
+  Minimal: "Minimal",
+  Moderate: "Moderate",
+};
 
 export const SessionType = {
-  Progress_Monitoring:"Progress Monitoring",
-Baseline_Data_Collection:"Baseline Data Collection"
-}
+  Progress_Monitoring: "Progress Monitoring",
+  Baseline_Data_Collection: "Baseline Data Collection",
+};
 
 export const SessionStatus = {
-  Active : "Active",
-  Abandon : "Abandon",
-  Deleted : 'Deleted'
-}
+  Active: "Active",
+  Abandon: "Abandon",
+  Deleted: "Deleted",
+};
 
-
-
+export const REPORT_STATUS = {
+  DRAFT: "DRAFT",
+  SIGNED: "SIGNED",
+  PENDING_QSP_SIGNATURE:"PENDING_QSP_SIGNATURE"
+};
 
 // audit.enums.ts
 export enum AuditAction {
   // AUTH
-  PROVIDER_LOGIN = "Provider Login",
-  PROVIDER_LOGOUT = "Provider Logout",
+  PROVIDER_LOGIN = "Login",
+  PROVIDER_LOGOUT = "Logout",
   SEND_OTP = "Send Otp",
   VERIFY_OTP = "Verify Otp",
   SET_PASSWORD = "Set Password",
 
-  // PROVIDER 
+  // PROVIDER
   VIEW_PROVIDER_PROFILE = "View Provider Profile",
   VIEW_PROVIDERS = "View Providers",
   CREATE_PROVIDER = "Create Provider",
@@ -130,8 +132,7 @@ export enum AuditAction {
   GENERATE_NOTES = "Generate Notes",
 
   //Export
-  EXPORT = "Export"
-
+  EXPORT = "Export",
 }
 
 export enum AuditResource {
@@ -141,64 +142,63 @@ export enum AuditResource {
   GOAL = "Goal",
   AUDIT = "Audit_Logs",
   SESSION = "Session",
-  EXPORT = 'Export'
+  EXPORT = "Export",
 }
 
 export const supportsOptions = [
-  'Coregulation',
-  'Visual supports',
-  'Offering Options',
-  'Asking leading questions',
-  'Asking open ended questions',
-  'Wait Watch Wonder',
-  'Words Action Affect',
-  'Joining',
-  'Use of Affect',
-  'Incorporating client interests',
-  'Sensory support',
-  'Environmental Modifications',
-  'Praxis Support',
-  'Affect Attunement',
-  'Role-Playing',
-  'Accommodating for Cognitive Load',
-  'Validation',
-  'Pacing',
-  'Scaffolding',
-  'Matching verbal complexity',
-  'Using natural contexts to enrich meaning',
-  'Expanding on the child\'s communication without',
+  "Coregulation",
+  "Visual supports",
+  "Offering Options",
+  "Asking leading questions",
+  "Asking open ended questions",
+  "Wait Watch Wonder",
+  "Words Action Affect",
+  "Joining",
+  "Use of Affect",
+  "Incorporating client interests",
+  "Sensory support",
+  "Environmental Modifications",
+  "Praxis Support",
+  "Affect Attunement",
+  "Role-Playing",
+  "Accommodating for Cognitive Load",
+  "Validation",
+  "Pacing",
+  "Scaffolding",
+  "Matching verbal complexity",
+  "Using natural contexts to enrich meaning",
+  "Expanding on the child's communication without",
 ];
 
 export const activityOptions = [
-  'Pretend Play',
-  'Art Activities',
-  'Outdoor Play',
-  'Building/Construction',
-  'Sensory Play',
-  'Music/Movement',
-  'Books/Stories',
-  'Puzzles/Games',
-  'Cause and Effect Play',
-  'Reflective Conversation',
-  'Conversation',
-  'Large Motor Play',
-  'Interactive Games',
-  'Storytelling',
-  'Fine Motor Activities',
-  'Motor Planning Games',
-  'Community Activities',
-  'Social Groups/Outings',
+  "Pretend Play",
+  "Art Activities",
+  "Outdoor Play",
+  "Building/Construction",
+  "Sensory Play",
+  "Music/Movement",
+  "Books/Stories",
+  "Puzzles/Games",
+  "Cause and Effect Play",
+  "Reflective Conversation",
+  "Conversation",
+  "Large Motor Play",
+  "Interactive Games",
+  "Storytelling",
+  "Fine Motor Activities",
+  "Motor Planning Games",
+  "Community Activities",
+  "Social Groups/Outings",
 ];
 
-
-export enum  GoalStatus   {
+export enum GoalStatus {
   Mastered = "Mastered",
   Discontinued = "Discontinued",
   InProgress = "InProgress",
 }
 export enum GoalBankStatus {
   Active = "Active",
-  Deleted ="Deleted"
+  Deleted = "Deleted",
 }
 
 export enum TicketSupportCategory {
@@ -219,4 +219,3 @@ export enum SupportPriority {
   HIGH = "high",
   URGENT = "urgent",
 }
-

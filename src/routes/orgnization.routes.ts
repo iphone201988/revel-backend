@@ -6,8 +6,11 @@ import auditLogs from "../middleware/auditLogs.middleware.js";
 import { auth } from "../middleware/auth.middleware.js";
 import { submitSupportTicket } from "../controller/supportTicket.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
+import authorization from "../middleware/permission.middleware.js";
+import { Permission } from "../utils/enums/enums.js";
 
 const router = express.Router();
+router.get("/", auth, orgController.getOrgnaization);
 
 router.post(
   "/register",
@@ -35,11 +38,20 @@ router.get(
   orgController.getProviderActivityReports
 );
 
-router.post('/submit', 
-    auth,
-    upload.single('image'),
-    validate(orgSchema.submitSupportTicketSchema),
-    submitSupportTicket
+router.post(
+  "/submit",
+  auth,
+  upload.single("image"),
+  validate(orgSchema.submitSupportTicketSchema),
+  submitSupportTicket
+);
+router.get('/reports', 
+  auth,
+  authorization(Permission.EditSignedNotes),
+  orgController.getDraftNotes
 )
-
+router.post('/saveSign',
+  auth,
+  orgController.saveSignatureToPendingNotes
+)
 export default router;

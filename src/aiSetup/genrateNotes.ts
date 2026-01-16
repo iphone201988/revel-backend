@@ -206,30 +206,156 @@ ${JSON.stringify(aiRequest.SOURCE_3_PROVIDER_OBSERVATIONS, null, 2)}
     };
   } catch (error) {
     console.error("❌ Vertex AI error:", error);
+    generateNotesFallbackFunction(aiRequest)
     throw error;
   }
 }
 
+export async function generateNotesFallbackFunction(aiRequest: any) {
+  try {
+    const sessionData = aiRequest?.SOURCE_2_SESSION_DATA || {};
+    const clientProfile = aiRequest?.SOURCE_1_CLIENT_PROFILE || {};
+    const providerObs = aiRequest?.SOURCE_3_PROVIDER_OBSERVATIONS || {};
 
-// import { GoogleAuth } from "google-auth-library";
-// import * as fs from "fs";
+    const goalsFromSession =
+      sessionData?.goals ||
+      sessionData?.goals_dataCollection ||
+      [];
 
-// export async function testAuth() {
-//   const keyFile =
-//     "D:/vivek Sharma/revel-backend/src/aiSetup/vertex-service-account.json";
-//   const credentials = JSON.parse(fs.readFileSync(keyFile, "utf-8"));
+    const safeGoals = Array.isArray(goalsFromSession)
+      ? goalsFromSession.map((goal: any) => {
+          const independent = goal?.performance?.independent || {};
+          const minimal = goal?.performance?.minimal_support || {};
+          const moderate = goal?.performance?.moderate_support || {};
 
-//   const auth = new GoogleAuth({
-//     credentials,
-//     scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-//   });
+          const totalTrials =
+            (independent?.count || 0) +
+            (minimal?.count || 0) +
+            (moderate?.count || 0);
 
-//   try {
-//     const client = await auth.getClient();
-//     const projectId = await auth.getProjectId();
-//     console.log("✅ Authentication successful");
-//     console.log("Project ID:", projectId);
-//   } catch (err) {
-//     console.error("❌ Authentication failed:", err);
-//   }
-// }
+          const totalSuccess =
+            (independent?.success || 0) +
+            (minimal?.success || 0) +
+            (moderate?.success || 0);
+
+          const totalMiss =
+            (independent?.miss || 0) +
+            (minimal?.miss || 0) +
+            (moderate?.miss || 0);
+
+          const accuracy =
+            totalTrials > 0
+              ? Math.round((totalSuccess / totalTrials) * 100)
+              : 0;
+
+          return {
+            goal_name: goal?.goal_name || goal?.name || "",
+            fedc_level: goal?.fedc_level || "",
+            circles_or_opportunities: goal?.circles_or_opportunities || 0,
+
+            performance: {
+              independent: {
+                count: independent?.count || 0,
+                success: independent?.success || 0,
+                miss: independent?.miss || 0,
+                success_percent: independent?.success_percent || 0,
+              },
+              minimal_support: {
+                count: minimal?.count || 0,
+                success: minimal?.success || 0,
+                miss: minimal?.miss || 0,
+                success_percent: minimal?.success_percent || 0,
+              },
+              moderate_support: {
+                count: moderate?.count || 0,
+                success: moderate?.success || 0,
+                miss: moderate?.miss || 0,
+                success_percent: moderate?.success_percent || 0,
+              },
+            },
+
+            totals: {
+              total_trials: totalTrials,
+              total_success: totalSuccess,
+              total_miss: totalMiss,
+              overall_accuracy_percent: accuracy,
+            },
+
+            engagement_summary: "",
+            performance_summary: "",
+          };
+        })
+      : [];
+
+    const fallbackResponse = {
+      session_metadata: {
+        client_name: sessionData?.client_name || "",
+        date: sessionData?.date || "",
+        session_type: sessionData?.session_type || "",
+        duration_minutes: sessionData?.duration_minutes || 0,
+        start_time: sessionData?.start_time || "",
+        end_time: sessionData?.end_time || "",
+        location: "Clinic",
+        provider: sessionData?.provider || "",
+      },
+
+      soap_note: {
+        subjective: providerObs?.subjective || "",
+
+        objective: {
+          session_context: providerObs?.session_context || "",
+          observations: providerObs?.observations || "",
+
+          data_and_progress: {
+            strategies_implemented:
+              sessionData?.strategies_implemented || [],
+            activities: sessionData?.activities || [],
+            goals: safeGoals,
+          },
+        },
+
+        assessment: "",
+        plan: "",
+      },
+    };
+
+    return {
+      soapNoteText: JSON.stringify(fallbackResponse),
+      isFallback: true,
+    };
+  } catch (error) {
+    console.error("❌ Fallback generation failed:", error);
+
+    // LAST-RESORT SAFE RESPONSE
+    return {
+      soapNoteText: JSON.stringify({
+        session_metadata: {
+          client_name: "",
+          date: "",
+          session_type: "",
+          duration_minutes: 0,
+          start_time: "",
+          end_time: "",
+          location: "Clinic",
+          provider: "",
+        },
+        soap_note: {
+          subjective: "",
+          objective: {
+            session_context: "",
+            observations: "",
+            data_and_progress: {
+              strategies_implemented: [],
+              activities: [],
+              goals: [],
+            },
+          },
+          assessment: "",
+          plan: "",
+        },
+      }),
+      isFallback: true,
+    };
+  }
+}
+

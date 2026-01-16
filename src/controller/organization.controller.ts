@@ -12,6 +12,7 @@ import {
   ClinicRole,
   GoalStatus,
   Permission,
+  REPORT_STATUS,
   SessionStatus,
   Status,
   supportsOptions,
@@ -25,6 +26,7 @@ import DataCollection from "../models/sessionData.model.js";
 import { Activities } from "../models/activity.model.js";
 import { Supports } from "../models/supports.model.js";
 import mongoose from "mongoose";
+import Report from "../models/notes.model.js";
 
 const registerOrganization = async (
   req: Request,
@@ -74,9 +76,11 @@ const registerOrganization = async (
       password,
     });
     await newClinic.save();
-    const allPermissions = Object.values(Permission);
+    const allPermissions = Object.values(Permission).filter(
+  (permission) => permission !== Permission.QspSignatureRequired
+);
     const provider = new Provider({
-      name: ownerFirstName + ownerLastName,
+      name: ownerFirstName + ' ' + ownerLastName,
 
       // credential,
       clinicRole: ClinicRole.QSP,
@@ -115,20 +119,25 @@ const registerOrganization = async (
     next(new ErrorHandler());
   }
 };
+
+/**this */
 const getFEDCNumber = (category: string): number => {
   const match = category.match(/FEDC[_\s](\d+)/i);
   return match ? parseInt(match[1]) : 0;
 };
 
+/**this */
+
+/**this */
 // Get Overview Statistics
- const getReportsOverview = async (
+const getReportsOverview = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { user } = req;
-    const { dateRange = "30" } = req.query;
+    const { dateRange } = req.query;
 
     // Calculate date range
     const daysAgo = parseInt(dateRange as string);
@@ -177,51 +186,59 @@ const getFEDCNumber = (category: string): number => {
     const clientsWithGoals = await Client.find({
       organizationId: user.organizationId,
       userStatus: User_Status.Active,
-      "itpGoals.goalStatus": GoalStatus.InProgress,
-    }).populate("itpGoals.goal");
-
-    // Count FEDC levels
-    const fedcCounts: { [key: string]: number } = {
-      "1-3": 0,
-      "4-6": 0,
-      "7-9": 0,
-    };
-
-    clientsWithGoals.forEach((client: any) => {
-      client.itpGoals.forEach((itpGoal: any) => {
-        if (itpGoal.goalStatus === GoalStatus.InProgress && itpGoal.goal) {
-          const fedcNum = getFEDCNumber(itpGoal.goal.category);
-          
-          if (fedcNum >= 1 && fedcNum <= 3) {
-            fedcCounts["1-3"]++;
-          } else if (fedcNum >= 4 && fedcNum <= 6) {
-            fedcCounts["4-6"]++;
-          } else if (fedcNum >= 7 && fedcNum <= 9) {
-            fedcCounts["7-9"]++;
-          }
-        }
-      });
+      itpGoals: {
+        $elemMatch: { goalStatus: GoalStatus.InProgress },
+      },
+    }).populate({
+      path: "itpGoals.goal",
+      select: "category",
     });
 
-    const totalFEDC = Object.values(fedcCounts).reduce((sum, count) => sum + count, 0);
-    
-    const fedcData = [
-      {
-        name: "FEDC 1-3",
-        value: totalFEDC > 0 ? Math.round((fedcCounts["1-3"] / totalFEDC) * 100) : 0,
-        color: "#395159",
-      },
-      {
-        name: "FEDC 4-6",
-        value: totalFEDC > 0 ? Math.round((fedcCounts["4-6"] / totalFEDC) * 100) : 0,
-        color: "#5a7a85",
-      },
-      {
-        name: "FEDC 7-9",
-        value: totalFEDC > 0 ? Math.round((fedcCounts["7-9"] / totalFEDC) * 100) : 0,
-        color: "#8ba3ad",
-      },
-    ];
+    // Count FEDC levels
+   const fedcCounts: Record<"1-3" | "4-6" | "7-9", number> = {
+  "1-3": 0,
+  "4-6": 0,
+  "7-9": 0,
+};
+
+clientsWithGoals.forEach((client: any) => {
+  client.itpGoals?.forEach((itpGoal: any) => {
+    if (
+      itpGoal.goalStatus === GoalStatus.InProgress &&
+      itpGoal.goal?.category
+    ) {
+      const fedcNum = getFEDCNumber(itpGoal.goal.category);
+
+      if (!fedcNum) return;
+
+      if (fedcNum <= 3) fedcCounts["1-3"]++;
+      else if (fedcNum <= 6) fedcCounts["4-6"]++;
+      else if (fedcNum <= 9) fedcCounts["7-9"]++;
+    }
+  });
+});
+
+const totalFEDC =
+  fedcCounts["1-3"] + fedcCounts["4-6"] + fedcCounts["7-9"];
+
+const fedcData = [
+  {
+    name: "FEDC 1-3",
+    value: totalFEDC ? Math.round((fedcCounts["1-3"] / totalFEDC) * 100) : 0,
+    color: "#395159",
+  },
+  {
+    name: "FEDC 4-6",
+    value: totalFEDC ? Math.round((fedcCounts["4-6"] / totalFEDC) * 100) : 0,
+    color: "#5a7a85",
+  },
+  {
+    name: "FEDC 7-9",
+    value: totalFEDC ? Math.round((fedcCounts["7-9"] / totalFEDC) * 100) : 0,
+    color: "#8ba3ad",
+  },
+];
+
 
     // Session Trends (last 6 months)
     const sixMonthsAgo = new Date();
@@ -250,7 +267,20 @@ const getFEDCNumber = (category: string): number => {
     ]);
 
     // Get duration data for each month
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     const formattedTrends = await Promise.all(
       sessionTrends.map(async (item) => {
         const monthStart = new Date(item._id.year, item._id.month - 1, 1);
@@ -285,6 +315,7 @@ const getFEDCNumber = (category: string): number => {
         $match: {
           organizationId: user.organizationId,
           userStatus: User_Status.Active,
+          createdAt: { $gte: startDate },
         },
       },
       {
@@ -295,11 +326,17 @@ const getFEDCNumber = (category: string): number => {
       },
     ]);
 
-    const totalClientsCount = diagnosisBreakdown.reduce((sum, item) => sum + item.count, 0);
+    const totalClientsCount = diagnosisBreakdown.reduce(
+      (sum, item) => sum + item.count,
+      0
+    );
     const formattedDiagnosis = diagnosisBreakdown.map((item) => ({
       diagnosis: item._id || "Not Specified",
       count: item.count,
-      percentage: totalClientsCount > 0 ? Math.round((item.count / totalClientsCount) * 100) : 0,
+      percentage:
+        totalClientsCount > 0
+          ? Math.round((item.count / totalClientsCount) * 100)
+          : 0,
     }));
 
     res.status(200).json({
@@ -320,17 +357,22 @@ const getFEDCNumber = (category: string): number => {
     console.log("error__", error);
     next(error);
   }
+  
+/**this */
 };
 
+/**this */
+
+/**this */
 // Get Client Progress Reports
- const getClientProgressReports = async (
+const getClientProgressReports = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { user } = req;
-    const { dateRange = "30", selectedClient = "all" } = req.query;
+    const { dateRange, selectedClient = "all" } = req.query;
 
     const daysAgo = parseInt(dateRange as string);
     const startDate = new Date();
@@ -372,12 +414,16 @@ const getFEDCNumber = (category: string): number => {
 
       // Calculate average FEDC level from active goals
       const activeGoalsFEDC = client.itpGoals
-        .filter((itpGoal: any) => itpGoal.goalStatus === GoalStatus.InProgress && itpGoal.goal)
+        .filter(
+          (itpGoal: any) =>
+            itpGoal.goalStatus === GoalStatus.InProgress && itpGoal.goal
+        )
         .map((itpGoal: any) => getFEDCNumber(itpGoal.goal.category));
 
       const avgFEDC =
         activeGoalsFEDC.length > 0
-          ? activeGoalsFEDC.reduce((sum: number, val: number) => sum + val, 0) / activeGoalsFEDC.length
+          ? activeGoalsFEDC.reduce((sum: number, val: number) => sum + val, 0) /
+            activeGoalsFEDC.length
           : 0;
 
       return {
@@ -400,15 +446,16 @@ const getFEDCNumber = (category: string): number => {
   }
 };
 
+/**this */
 // Get Provider Activity Reports
- const getProviderActivityReports = async (
+const getProviderActivityReports = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { user } = req;
-    const { dateRange = "30", selectedProvider = "all" } = req.query;
+    const { dateRange, selectedProvider = "all" } = req.query;
 
     const daysAgo = parseInt(dateRange as string);
     const startDate = new Date();
@@ -462,7 +509,9 @@ const getFEDCNumber = (category: string): number => {
         const totalDuration = durationResult[0]?.totalDuration || 0;
         const totalHours = totalDuration / 3600;
         const avgSessionLength =
-          providerSessions.length > 0 ? Math.round((totalDuration / 60) / providerSessions.length) : 0;
+          providerSessions.length > 0
+            ? Math.round(totalDuration / 60 / providerSessions.length)
+            : 0;
 
         return {
           provider: provider.name,
@@ -484,9 +533,106 @@ const getFEDCNumber = (category: string): number => {
   }
 };
 
+const getOrgnaization = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+
+    const organization = await Organization.findOne({
+      _id: user?.organizationId,
+    });
+    if (!organization) {
+      return next(new ErrorHandler("Orgnaization not found", 400));
+    }
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Orgnaization found successfully",
+        data: organization,
+      });
+  } catch (error) {
+    console.log(error, "error__");
+    next(new ErrorHandler());
+  }
+};
+
+const getDraftNotes = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const reports = await Report.find({
+      orgnaizationId: user?.organizationId,
+      status: REPORT_STATUS.PENDING_QSP_SIGNATURE,
+    });
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Reports found successfully...",
+        data: reports,
+      });
+  } catch (error) {
+    console.log(error, "error__");
+    next(new ErrorHandler());
+  }
+};
+
+const saveSignatureToPendingNotes = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { reportIds, qspSignature } = req.body;
+
+    // ✅ Validation
+    if (!Array.isArray(reportIds) || reportIds.length === 0) {
+      return next(new ErrorHandler("Report IDs are required", 400));
+    }
+
+    if (!qspSignature || !qspSignature.trim()) {
+      return next(new ErrorHandler("Signature is required", 400));
+    }
+
+    // ✅ Bulk update
+    const result = await Report.updateMany(
+      { _id: { $in: reportIds } },
+      {
+        $set: {
+          qspSignature,
+          status: REPORT_STATUS.SIGNED,
+          signedAt: new Date(),
+        },
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Signature added to reports successfully",
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("saveSignatureToReport error:", error);
+    next(new ErrorHandler());
+  }
+};
+
 export const orgController = {
   registerOrganization,
   getReportsOverview,
-getClientProgressReports,
-getProviderActivityReports
+  getClientProgressReports,
+  getProviderActivityReports,
+  getOrgnaization,
+  getDraftNotes,
+  saveSignatureToPendingNotes,
 };

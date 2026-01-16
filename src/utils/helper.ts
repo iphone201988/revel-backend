@@ -73,6 +73,7 @@ export const defaultUserPermissions = [
   Permission.CollectFEDCData,
   Permission.ViewGoalBank,
   Permission.ScheduleSessions,
+  Permission.QspSignatureRequired
 ]
 
 
@@ -86,10 +87,7 @@ export const auditRouteMap: Record<string, {
 }> = {
 
   // AUTH
-  "POST /api/provider/login": {
-    action: AuditAction.PROVIDER_LOGIN,
-    resource: AuditResource.AUTH,
-  },
+ 
   "PUT /api/provider/logout": {
     action: AuditAction.PROVIDER_LOGOUT,
     resource: AuditResource.AUTH,
@@ -114,6 +112,10 @@ export const auditRouteMap: Record<string, {
   },
   "POST /api/provider/addProvider": {
     action: AuditAction.CREATE_PROVIDER,
+    resource: AuditResource.PROVIDER,
+  },
+  "POST /api/provider/sendLink": {
+    action: AuditAction.UPDATE_PROVIDER,
     resource: AuditResource.PROVIDER,
   },
 

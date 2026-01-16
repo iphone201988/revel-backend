@@ -2,6 +2,8 @@ import { NextFunction, Request, Response } from "express";
 import ErrorHandler from "../utils/ErrorHandler.js";
 import Provider from "../models/provider.model.js";
 import {
+  AuditAction,
+  AuditResource,
   GoalBankStatus,
   GoalStatus,
   SessionStatus,
@@ -19,6 +21,7 @@ import {
   formatSessionDate,
   generateOtp,
   generateRandomString,
+  getClientIp,
   getGoalColor,
   hasClientVariables,
   sendMail,
@@ -40,6 +43,7 @@ import {
   SupportLevelData,
 } from "../types/types.js";
 import DataCollection from "../models/sessionData.model.js";
+import AuditLogs from "../models/auditLogs.model.js";
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -124,6 +128,20 @@ const verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
       { userId: provider?._id, jti: jti },
       process.env.JWT_SECRET_KEY
     );
+
+    await AuditLogs.create({
+      organizationId: provider.organizationId,
+      user: provider._id,
+      userName: provider.name,
+      userEmail: provider.email,
+      action: AuditAction.PROVIDER_LOGIN,
+      resource: AuditResource.AUTH,
+      ipAddress: getClientIp(req),
+      details: {
+        email,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       message: "Account verifued successfully..",
@@ -164,6 +182,7 @@ const getClients = async (req: Request, res: Response, next: NextFunction) => {
     const { user } = req;
     const clients = await Client.find({
       organizationId: user?.organizationId,
+      userStatus: User_Status.Active,
     }).populate("qsp");
     if (!clients.length) {
       return next(new ErrorHandler("Clients not found", 400));
@@ -414,6 +433,8 @@ const updateClient = async (
   }
 };
 
+
+/**this */
 const updateClientItpGoal = async (
   req: Request,
   res: Response,
@@ -421,7 +442,7 @@ const updateClientItpGoal = async (
 ) => {
   try {
     const { clientId, itpGoalId }: any = req.query;
-    const { targetDate, baselinePercentage } = req.body;
+    const { targetDate, baselinePercentage ,masteryPercentage ,sessionCount ,supportLevel} = req.body;
 
     const result = await Client.updateOne(
       {
@@ -432,6 +453,9 @@ const updateClientItpGoal = async (
         $set: {
           "itpGoals.$.targetDate": targetDate,
           "itpGoals.$.baselinePercentage": baselinePercentage,
+          "itpGoals.$.masteryPercentage": masteryPercentage,
+          "itpGoals.$.sessionCount": sessionCount,
+          "itpGoals.$.supportLevel": supportLevel,
         },
       }
     );
@@ -449,6 +473,8 @@ const updateClientItpGoal = async (
     next(new ErrorHandler("Failed to update ITP goal", 500));
   }
 };
+
+/**this */
 
 const getProviders = async (
   req: Request,
@@ -510,7 +536,16 @@ const addProvider = async (req: Request, res: Response, next: NextFunction) => {
     const findPrvoder = await Provider.findOne({
       email: Email,
       userStatus: User_Status.Active,
+      organizationId: user?.organizationId,
     });
+    const findExistingEmail = await Client.findOne({
+      email: Email,
+      organizationId: user?.organizationId,
+      userStatus: User_Status.Active,
+    });
+    if (findPrvoder || findExistingEmail) {
+      return next(new ErrorHandler("Provider Email is already exist", 400));
+    }
     const sendSetPasswordEmail = async () => {
       const setPasswordToken = jwt.sign(
         { email: Email, tokenVersion: user.tokenVersion },
@@ -526,13 +561,7 @@ const addProvider = async (req: Request, res: Response, next: NextFunction) => {
 
       await sendMail(Email, subject, text, html);
     };
-    if (findPrvoder) {
-      await sendSetPasswordEmail();
-      return res.status(200).json({
-        success: true,
-        message: "Invitation has been sent  to email.",
-      });
-    }
+
     let deafultpermissions;
     if (systemRole === SystemRoles.Admin) {
       deafultpermissions = defaultAdminPermissions;
@@ -577,6 +606,7 @@ const setUpProviderAccount = async (
     if (!provider) {
       return next(new ErrorHandler(" Provider not found"));
     }
+
     if (decode.tokenVersion !== provider?.tokenVersion) {
       return next(new ErrorHandler("Token is expired", 400));
     }
@@ -749,7 +779,9 @@ const updateProviderPermissions = async (
       data: provider.permissions,
     });
   } catch (error) {
-    next(error);
+    console.log(error, "====error");
+
+    next(new ErrorHandler(error?.message, error?.statusCode));
   }
 };
 
@@ -889,7 +921,36 @@ const deleteGoal = async (req: Request, res: Response, next: NextFunction) => {
     next(new ErrorHandler());
   }
 };
+const deleteClient = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { clientId } = req.query;
+    const { user } = req;
 
+    const findClient = await Client.findOne({
+      _id: clientId,
+      organizationId: user?.organizationId,
+    });
+    if (!findClient) {
+      return next(new ErrorHandler("Client not found", 400));
+    }
+
+    findClient.userStatus = User_Status.Deleted;
+    await findClient.save();
+    return res
+      .status(200)
+      .json({ success: true, message: "Client deleted successfully" });
+  } catch (error) {
+    console.log("errror---", error);
+    next(new ErrorHandler(error?.message, error?.statusCode));
+  }
+};
+
+
+/**this */
 const addItpGoalsToClient = async (
   req: Request,
   res: Response,
@@ -921,7 +982,7 @@ const addItpGoalsToClient = async (
       finalGoalId = newGoal._id;
     }
     // 🔹 Validate existing GoalBank goal
-    else {
+    
       const goal = await GoalBank.findOne({
         _id: goalId,
         organizationId: user?.organizationId,
@@ -930,7 +991,7 @@ const addItpGoalsToClient = async (
       if (!goal) {
         return next(new ErrorHandler("Goal not found", 404));
       }
-    }
+    
 
     // 🔹 Prevent duplicate assignment
     // const alreadyAssigned = await Client.findOne({
@@ -954,6 +1015,9 @@ const addItpGoalsToClient = async (
             goal: finalGoalId,
             targetDate,
             baselinePercentage,
+            masteryPercentage: goal?.criteriaForMastry.masteryPercentage,
+            supportLevel: goal?.criteriaForMastry.supportLevel,
+            sessionCount: goal?.criteriaForMastry.acrossSession            
           },
         },
       },
@@ -971,6 +1035,7 @@ const addItpGoalsToClient = async (
   }
 };
 
+/**this */
 const logOut = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { user } = req;
@@ -1016,6 +1081,7 @@ const getAssignedClients = async (
   }
 };
 
+/**this */
 const getArchivedGoals = async (
   req: Request,
   res: Response,
@@ -1066,12 +1132,15 @@ const getArchivedGoals = async (
       .lean();
 
     // Group session data by goal (same as progressReport)
-const goalSessionMap = new Map<string, Array<{
-  date: Date;
-  accuracy: number;
-  supportLevel: SupportLevelData;
-  total: number;
-}>>();
+    const goalSessionMap = new Map<
+      string,
+      Array<{
+        date: Date;
+        accuracy: number;
+        supportLevel: SupportLevelData;
+        total: number;
+      }>
+    >();
 
     sessionDataCollections.forEach((sessionData: any) => {
       const sessionDate =
@@ -1110,7 +1179,9 @@ const goalSessionMap = new Map<string, Array<{
     // Filter archived goals and calculate successRate using same logic
     const archivedGoals = client.itpGoals
       .filter((itpGoal: any) =>
-        [GoalStatus.Mastered, GoalStatus.Discontinued].includes(itpGoal.goalStatus)
+        [GoalStatus.Mastered, GoalStatus.Discontinued].includes(
+          itpGoal.goalStatus
+        )
       )
       .map((itpGoal: any) => {
         const goalId = itpGoal.goal._id.toString();
@@ -1167,7 +1238,8 @@ const goalSessionMap = new Map<string, Array<{
 
           const sum = sessionsWithData.reduce(
             (acc, session) =>
-              acc + (session[supportLevelKey as keyof typeof session] as number),
+              acc +
+              (session[supportLevelKey as keyof typeof session] as number),
             0
           );
           return Math.round(sum / sessionsWithData.length);
@@ -1206,13 +1278,9 @@ const goalSessionMap = new Map<string, Array<{
   }
 };
 
+/**this */
 
-
-
-
-
-
-
+/**this */
 const progressReport = async (
   req: Request,
   res: Response,
@@ -1287,7 +1355,7 @@ const progressReport = async (
         }
 
         goalSessionMap.get(goalId)!.push({
-          date: new Date(sessionDate), 
+          date: new Date(sessionDate),
           accuracy: goalData.accuracy || 0,
           supportLevel: goalData.supportLevel || {
             independent: { count: 0, success: 0, miss: 0 },
@@ -1436,7 +1504,8 @@ const progressReport = async (
       const trendData = sessionData.map((session) => {
         let supportLevelKey = "independent";
         if (requiredSupportLevel === "Moderate") supportLevelKey = "moderate";
-        else if (requiredSupportLevel === "Minimal") supportLevelKey = "minimal";
+        else if (requiredSupportLevel === "Minimal")
+          supportLevelKey = "minimal";
 
         return {
           ...session,
@@ -1526,6 +1595,8 @@ const progressReport = async (
     next(new ErrorHandler("Failed to fetch progress report", 500));
   }
 };
+
+/**this */
 // const goalProgressReview = async (
 //   req: Request,
 //   res: Response,
@@ -1793,6 +1864,49 @@ const updateGoalStatus = async (
   }
 };
 
+const sendPasswordLink = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { providerId } = req.body;
+
+    const provider = await Provider.findOne({
+      _id: providerId,
+      organizationId: user?.organizationId,
+    });
+    if (!provider) {
+      return next(new ErrorHandler("Provider not found.", 400));
+    }
+    const Email = provider?.email;
+    const sendSetPasswordEmail = async () => {
+      const setPasswordToken = jwt.sign(
+        { email: Email, tokenVersion: provider.tokenVersion },
+        process.env.JWT_SECRET_KEY,
+        { expiresIn: "1h" }
+      );
+      const passwordLink = `${process.env.FRONTEND_URL}/set-account?token=${setPasswordToken}`;
+      const subject = "Set Your Account Password";
+
+      const text = `Click the link below to set your password:-\n\nThis link is valid for 1h minutes.`;
+
+      const html = setPasswordLink(passwordLink);
+
+      await sendMail(Email, subject, text, html);
+    };
+    console.log(user?.tokenVersion, "token version  in send password link api");
+
+    sendSetPasswordEmail();
+    return res
+      .status(200)
+      .json({ success: true, message: "Link has been sent to Provider Email" });
+  } catch (error) {
+    console.error("Error updating goal status:", error);
+    next(new ErrorHandler("Failed to update goal status", 500));
+  }
+};
 
 export const providerController = {
   addProvider,
@@ -1821,4 +1935,6 @@ export const providerController = {
   // goalProgressReview,
   updateGoalStatus,
   progressReport,
+  deleteClient,
+  sendPasswordLink,
 };

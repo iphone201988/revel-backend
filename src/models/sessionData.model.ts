@@ -1,6 +1,7 @@
 import { timeStamp } from "console";
 import mongoose from "mongoose";
 import { ref } from "process";
+import { SupportLevel } from "../utils/enums/enums.js";
 
 const sessionDataModel = new mongoose.Schema(
   {
@@ -14,6 +15,17 @@ const sessionDataModel = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "GoalBank",
         },
+        mastryPercentage:{
+          type:Number
+        },
+        sessionCount:{
+          type:Number
+        },
+        mastrySupportLevel:{
+          type:String,
+          enum:[SupportLevel.Independent, SupportLevel.Moderate, SupportLevel.Minimal]
+        },
+        
         accuracy: {
           type: Number,
     

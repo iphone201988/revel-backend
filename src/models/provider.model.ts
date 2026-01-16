@@ -85,6 +85,7 @@ const providerModel = new mongoose.Schema({
         Permission.AccessAdmin,
         Permission.ManageProviders,
         Permission.ManagePermissions,
+        Permission.QspSignatureRequired
       ],
       default: [
         Permission.ViewAssignedClients,
@@ -99,7 +100,11 @@ const providerModel = new mongoose.Schema({
   tokenVersion:{
     type:Number,
     default: 0
-  }
+  },
+  stripeCustomerId:{
+    type:String
+  },
+  
 });
 providerModel.pre("save", async function () {
   if (this.isModified("password")) {

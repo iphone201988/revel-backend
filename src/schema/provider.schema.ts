@@ -59,29 +59,35 @@ const sendOtpSchema = {
 
 const addClientSchema = {
   body: joi.object({
-    name: joi.string().trim().min(2).max(100).required().messages({
+    name: joi.string().trim().min(2).max(25).required().messages({
       "string.base": "Name must be a text value.",
       "string.empty": "Name is required.",
       "string.min": "Name must be at least 2 characters long.",
-      "string.max": "Name must be at most 100 characters long.",
+      "string.max": "Name must be at most 25 characters long.",
       "any.required": "Name is required.",
     }),
 
-    dob: joi.date().iso().less("now").required().messages({
-      "date.base": "Date of birth must be a valid date.",
-      "date.less": "Date of birth must be in the past.",
-      "any.required": "Date of birth is required.",
-    }),
+    dob: joi
+      .date()
+      .iso()
+      .max(new Date(new Date().setFullYear(new Date().getFullYear() - 16)))
+      .less("now")
+      .required()
+      .messages({
+        "date.base": "Date of birth must be a valid date.",
+        "date.less": "Date of birth must be in the past.",
+        "any.required": "Date of birth is required.",
+      }),
 
     diagnosis: joi.string().trim().allow("", null).messages({
       "string.base": "Diagnosis must be a text value.",
     }),
 
-    parentName: joi.string().trim().min(2).max(100).required().messages({
+    parentName: joi.string().trim().min(2).max(25).required().messages({
       "string.base": "Parent name must be a text value.",
       "string.empty": "Parent name is required.",
       "string.min": "Parent name must be at least 2 characters long.",
-      "string.max": "Parent name must be at most 100 characters long.",
+      "string.max": "Parent name must be at most 25 characters long.",
       "any.required": "Parent name is required.",
     }),
 
@@ -148,13 +154,13 @@ const createProviderSchema = {
       .string()
 
       .min(2)
-      .max(100)
+      .max(25)
       .required()
       .messages({
         "string.base": "Name must be a text value.",
         "string.empty": "Name is required.",
         "string.min": "Name must be at least 2 characters long.",
-        "string.max": "Name must be at most 100 characters long.",
+        "string.max": "Name must be at most 25 characters long.",
         "any.required": "Name is required.",
       }),
 
@@ -228,7 +234,8 @@ const updateProviderSchema = {
 
   body: joi
     .object({
-      name: joi.string().optional().trim().messages({
+      name: joi.string().optional().min(2).max(25).trim().messages({
+        "string.max": "Name must be at most 25 characters long.",
         "string.base": "Name must be a string",
       }),
 
@@ -294,9 +301,10 @@ const updateClientSchema = {
 
   body: joi
     .object({
-      name: joi.string().messages({
+      name: joi.string().min(2).max(25).messages({
         "string.base": "Name must be a string",
         "string.empty": "Name cannot be empty",
+        "string.max": "Name must be at most 25 characters long.",
       }),
 
       dob: joi.date().messages({
@@ -308,8 +316,9 @@ const updateClientSchema = {
         "string.empty": "Diagnosis cannot be empty",
       }),
 
-      parentName: joi.string().messages({
+      parentName: joi.string().min(2).max(25).messages({
         "string.base": "Parent name must be a string",
+        "string.max": "Parent Name must be at most 25 characters long.",
         "string.empty": "Parent name cannot be empty",
       }),
 
@@ -431,12 +440,35 @@ const updateClientItpGoalSchema = {
       "date.base": "Target date must be a valid date",
     }),
 
-    baselinePercentage: joi.number().min(0).max(100).optional().messages({
+    baselinePercentage: joi.number().min(1).max(100).optional().messages({
       "any.required": "Baseline percentage is required",
       "number.base": "Baseline percentage must be a number",
       "number.min": "Baseline percentage cannot be less than 0",
       "number.max": "Baseline percentage cannot be greater than 100",
     }),
+    masteryPercentage: joi.number().min(1).max(100).optional().messages({
+      "number.base": "Mastry percentage must be a number",
+      "number.min": "Mastry percentage cannot be less than 0",
+      "number.max": "Mastry percentage cannot be greater than 100",
+    }),
+
+    sessionCount: joi.number().min(1).optional().messages({
+      "number.base": "Session count must be a number",
+      "number.min": "Session count cannot be less than 0",
+      "number.max": "Session count cannot be greater than 100",
+    }),
+    supportLevel: joi
+      .string()
+      .valid(
+        SupportLevel.Independent,
+        SupportLevel.Minimal,
+        SupportLevel.Moderate
+      )
+      .optional()
+      .messages({
+        "any.only": "Invalid support level.",
+        "any.required": "Support level is required.",
+      }),
   }),
 };
 
@@ -584,6 +616,7 @@ const getClientProfileSchema = {
   }),
 };
 
+/**thi----- */
 const addItpGoalsToClientSchema = {
   body: joi.object({
     clientId: joi.string().length(24).hex().required().messages({
@@ -747,13 +780,15 @@ const updateGoalStatusSchema = joi
     reason: joi
       .string()
       .trim()
-      .when('status', {
-        is: joi.string().valid( GoalStatus.Discontinued),
+      .when("status", {
+        is: joi.string().valid(GoalStatus.Discontinued),
         then: joi.string().required().messages({
-          "any.required": "Reason is required for Mastered or Discontinued status.",
-          "string.empty": "Reason cannot be empty for Mastered or Discontinued status.",
+          "any.required":
+            "Reason is required for Mastered or Discontinued status.",
+          "string.empty":
+            "Reason cannot be empty for Mastered or Discontinued status.",
         }),
-        otherwise: joi.string().allow('').optional().messages({
+        otherwise: joi.string().allow("").optional().messages({
           "string.base": "Reason must be a string.",
         }),
       }),
@@ -762,7 +797,19 @@ const updateGoalStatusSchema = joi
   .messages({
     "object.base": "Request body must be a valid object.",
   });
-
+const sendPasswordLinkSchema = {
+  body: joi.object({
+    providerId: joi.string().required().length(24).hex().messages({
+      "string.base": "Provider Id must be a string.",
+      "string.hex":
+        "Provider Id must contain only valid hexadecimal characters.",
+      "string.length":
+        "Provider Id must be exactly 24 characters long (MongoDB ObjectId).",
+      "any.required": "Provider Id is required.",
+      "string.empty": "Provider Id cannot be empty",
+    }),
+  }),
+};
 export const providerSchema = {
   loginSchema,
   verifyOtpSchema,
@@ -781,5 +828,6 @@ export const providerSchema = {
   getArchivedGoalSchema,
   viewPermissionSchema,
   deleteGoalSchema,
+  sendPasswordLinkSchema,
   updateGoalStatusSchema,
 };

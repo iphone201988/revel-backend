@@ -6,7 +6,7 @@ import Client from "../models/client.model.js";
 import { generateNotesWithAi } from "../aiSetup/genrateNotes.js";
 import GoalBank from "../models/goalbank.model.js";
 import Report from "../models/notes.model.js";
-import { SessionStatus } from "../utils/enums/enums.js";
+import { REPORT_STATUS, SessionStatus } from "../utils/enums/enums.js";
 import { Activities } from "../models/activity.model.js";
 import { Supports } from "../models/supports.model.js";
 import { checkAndUpdateGoalMastery } from "../utils/helper.js";
@@ -184,7 +184,7 @@ const startSession = async (
     next(new ErrorHandler());
   }
 };
-
+/*** this ------------------ */
 const collectSessionData = async (
   req: Request,
   res: Response,
@@ -332,59 +332,7 @@ const buildClientProfile = (client: any) => {
   };
 };
 
-// SOURCE 2: Session Data
-// const buildSessionData = (session: any, dataCollection: any, provider: any) => {
-//   const goals = dataCollection?.goals_dataCollection?.map((g: any) => {
-//     const goalName = g.goalId?.discription || "Unnamed goal";
-//     const fedcCategory = g.goalId?.category?.replace("_", " ") || "";
-    
-//     // Calculate circles/opportunities
-//     const totalOpportunities = g.counter || 0;
-//     const circles = g.supportLevel?.independent?.count || 
-//                     g.supportLevel?.minimal?.count || 
-//                     g.supportLevel?.modrate?.count || 0;
 
-//     return {
-//       goal_name: goalName,
-//       fedc_category: fedcCategory,
-//       circles_or_opportunities: circles > 0 ? `${circles} circles` : `${totalOpportunities} opportunities`,
-//       performance: {
-//         moderate_support: g.supportLevel?.modrate?.success 
-//           ? `${Math.round(g.supportLevel.modrate.success)}%` 
-//           : "0%",
-//         minimal_support: g.supportLevel?.minimal?.success 
-//           ? `${Math.round(g.supportLevel.minimal.success)}%` 
-//           : "0%",
-//         independent: g.supportLevel?.independent?.success 
-//           ? `${Math.round(g.supportLevel.independent.success)}%` 
-//           : "0%",
-//       },
-//     };
-//   }) || [];
-
-//   return {
-//     date_of_session: session?.dateOfSession
-//       ? new Date(session.dateOfSession).toLocaleDateString()
-//       : "N/A",
-//     start_time: session?.startTime
-//       ? new Date(session.startTime).toLocaleTimeString()
-//       : "N/A",
-//     end_time: session?.endTime
-//       ? new Date(session.endTime).toLocaleTimeString()
-//       : "N/A",
-//     duration_minutes: dataCollection?.duration
-//       ? Math.round(dataCollection.duration / 60)
-//       : 0,
-//     session_type: session?.sessionType || "Not specified",
-//     client: session?.client || "",
-//     session_provider: provider?.name || "Provider Name",
-//     provider_credentials: provider?.credential || "Credentials",
-//     individuals_present: session?.present || "Client and Provider",
-//     activities_engaged_in: dataCollection?.activityEngaged || [],
-//     strategies_used: dataCollection?.supportsObserved || [],
-//     goals_progress: goals,
-//   };
-// };
 const buildSessionData = (session: any, dataCollection: any, provider: any) => {
   const goals =
     dataCollection?.goals_dataCollection?.map((g: any) => {
@@ -482,80 +430,12 @@ const buildProviderObservations = (session: any, dataCollection: any) => ({
   client_variables: session?.clientVariables || "Not discussed this session",
   provider_observations: dataCollection?.providerObservation || "No observations recorded",
 });
-// const testAIRequest = {
-//   SOURCE_1_CLIENT_PROFILE: {
-//     name: "Leo",
-//     age: 4.5,
-//     diagnosis: "Autism",
-//     interests: "Meticulously lining up wooden railway, watching sunlight reflect off spinning wheels, train play",
-//     strengths: "Visual-spatial memory is a significant strength, allowing him to navigate his home with precision and notice the slightest change in the placement of his favorite objects. Capable of shared attention and regulation (FEDC 1) when environment is quiet and predictable. Displays warm, joyful attachment to primary caregivers (FEDC 2). Can engage in several back-and-forth circles of communication (FEDC 3) when play involves trains.",
-//     learning_style: "Visual-spatial learning, Gestalt Language Processor",
-//     areas_of_challenge: "Struggles with motor planning, specifically the ability to sequence multi-step tasks like building a complex bridge. Struggles to expand communication into complex problem-solving (FEDC 4). Lacks social-sequencing skills to grab father's hand and gesture for help when problems arise, often collapsing into dysregulation instead. Pressure to perform exceeds current developmental capacity.",
-//     family_context: "Lives with parents Sarah and Mark, and two-year-old sister Maya. Mother Sarah is highly intuitive but often feels she must 'protect' Leo from the world's noise. Father Mark tends to take a more didactic approach, frequently trying to turn play into a lesson on colors or numbers, which often causes Leo to 'tune out.'",
-//     sensory_processing: "Highly sensitive to auditory input; a sudden sneeze or the hum of a vacuum can cause him to instantly disengage and cover his ears in distress. Conversely, he is a seeker of proprioceptive and vestibular input, often craving 'heavy work' or spinning in circles to feel grounded in his body.",
-//     communication: "Communication is primarily that of a Gestalt Language Processor; he uses 'scripts' from his favorite shows to communicate his internal state, such as saying 'All aboard!' to signal he is ready to transition outside.",
-//     safety_considerations: "Safety is a primary concern for the family; Leo lacks a concept of danger and will bolt toward bodies of water due to his sensory fascination with splashing.",
-//     fedc_level: "FEDC 3",
-//     preferred_activities: "Train play, sensory play involving proprioceptive and vestibular input, spinning, heavy work activities"
-//   },
-  
-//   SOURCE_2_SESSION_DATA: {
-//     date_of_session: "10/25/2024",
-//     start_time: "10:01 AM",
-//     end_time: "10:46 AM",
-//     duration_minutes: 45,
-//     session_type: "EIDBI ITP H0032UB",
-//     client: "Leo",
-//     session_provider: "Provider Name",
-//     provider_credentials: "Credentials",
-//     individuals_present: "Client and Provider; Writer observed remotely via telehealth",
-//     activities_engaged_in: [
-//       "Sensory play",
-//       "Cause and effect play",
-//       "Tactile sensory play with bristle block and regular block"
-//     ],
-//     strategies_used: [
-//       "Affect attunement",
-//       "Pacing",
-//       "Scaffolding",
-//       "Joining",
-//       "Following the client's lead"
-//     ],
-//     goals_progress: [
-//       {
-//         goal_name: "Back and Forth Social Interactions",
-//         fedc_category: "FEDC 3",
-//         circles_or_opportunities: "5 circles",
-//         performance: {
-//           moderate_support: "33%",
-//           minimal_support: "0%",
-//           independent: "0%"
-//         }
-//       },
-//       {
-//         goal_name: "Use Regulation Strategies",
-//         fedc_category: "FEDC 1",
-//         circles_or_opportunities: "Multiple opportunities",
-//         performance: {
-//           moderate_support: "100%",
-//           minimal_support: "100%",
-//           independent: "100%"
-//         }
-//       }
-//     ]
-//   },
-  
-//   SOURCE_3_PROVIDER_OBSERVATIONS: {
-//     client_variables: "Provider shared that client has been ill, but is seemingly better as he has more energy. She noted that he still coughs at times.",
-//     provider_observations: "Client appeared dysregulated as he attempted to close the laptop on the video call multiple times. He walked around the house, going up and down the stairs, turning lights on and off and then indicating a desire to go outside by standing by the door and then getting the provider's shoes for her. Client sat on the step and engaged in a back and forth interaction involving a bristle block and a regular block being rubbed back and forth across different parts of his body. Client then went downstairs and the observation ended."
-//   }
-// };
 
-// // Export for testing
-// export default testAIRequest;
 
 // Main API Handler
-export const buildAIRequest = async (
+
+/**this */
+ const buildAIRequest = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -621,27 +501,36 @@ export const buildAIRequest = async (
     //   });
     // }
 
-    // 8️⃣ Save Report (optional)
-    // const report = await Report.create({
-    //   sessionId,
-    //   soapNote: parsedResponse.soap_note,
-    //   sessionMetadata: parsedResponse.session_metadata,
-    // });
+    
 
-    // 9️⃣ Response
     return res.status(200).json({
       success: true,
       message: "AI clinical note generated successfully",
       data: {
         aiRequest,
         soapNote: parsedResponse,
-        // reportId: report._id,
       },
     });
   } catch (error) {
     next(error);
   }
 };
+
+/**this */
+ const createReport = async (req: Request, res: Response, next:NextFunction) => {
+  const {user} = req;
+  const report =  req.body
+  const saveReport = await Report.create(report);
+
+ return  res.status(201).json({
+    success: true,
+    message:"Report saved successfully..",
+    data: saveReport,
+  });
+};
+
+/**this */
+
 const saveSignatureToReport = async (
   req: Request,
   res: Response,
@@ -650,7 +539,7 @@ const saveSignatureToReport = async (
   try {
     const { reportId, signature } = req.body;
     const updatedReport = await Report.findByIdAndUpdate(reportId, {
-      $set: { signature: signature },
+      $set: { signature: signature , status: REPORT_STATUS.SIGNED},
     });
 
     return res.status(200).json({
@@ -664,28 +553,7 @@ const saveSignatureToReport = async (
   }
 };
 
-const createReportManually = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const {
-      sessionId,
-      sessionOverview,
 
-      plan,
-      fedcObservation,
-      interactionsAndAffect,
-      goalProgress,
-      signature,
-    } = req.body;
-    // presentationAndEngagement,
-  } catch (error) {
-    console.log("error__", error);
-    next(new ErrorHandler());
-  }
-};
 
 const abandonSession = async (
   req: Request,
@@ -723,5 +591,6 @@ export const sessionController = {
   addActivity,
   addSupport,
   getActivities,
+  createReport,
   getSupports,
 };
